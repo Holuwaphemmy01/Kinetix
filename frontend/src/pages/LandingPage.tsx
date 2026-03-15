@@ -21,7 +21,7 @@ const LandingPage: React.FC = () => {
             <a className="text-sm font-medium hover:text-primary transition-colors" href="#">About Us</a>
           </nav>
           <button className="bg-primary hover:bg-primary/90 text-background-dark px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-primary/20">
-            Launch Dashboard
+            Login
           </button>
         </div>
       </header>

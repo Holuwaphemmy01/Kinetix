@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 interface LoginPageProps {
   onBack?: () => void;
   onSignUpClick: () => void;
+  onLoginSuccess: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSignUpClick }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSignUpClick, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -97,6 +98,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSignUpClick }) => {
 
             <button 
               disabled={!isFormValid}
+              onClick={onLoginSuccess}
               className={`w-full font-bold py-3.5 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 mt-4 ${
                 isFormValid 
                 ? 'bg-primary hover:bg-primary/90 text-background-dark shadow-primary/20' 

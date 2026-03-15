@@ -1,6 +1,10 @@
 import React from 'react';
 
-const LandingPage: React.FC = () => {
+interface LandingPageProps {
+  onLoginClick: () => void;
+}
+
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased font-display">
       {/* Header/Navbar */}
@@ -20,7 +24,10 @@ const LandingPage: React.FC = () => {
             <a className="text-sm font-medium hover:text-primary transition-colors" href="#">Rider App</a>
             <a className="text-sm font-medium hover:text-primary transition-colors" href="#">About Us</a>
           </nav>
-          <button className="bg-primary hover:bg-primary/90 text-background-dark px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-primary/20">
+          <button 
+            onClick={onLoginClick}
+            className="bg-primary hover:bg-primary/90 text-background-dark px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-primary/20"
+          >
             Login
           </button>
         </div>

@@ -3,9 +3,10 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import CustomerOnboarding from './pages/CustomerOnboarding';
 import CustomerDashboard from './pages/CustomerDashboard';
+import RiderOnboarding from './pages/RiderOnboarding';
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'login' | 'onboarding' | 'dashboard'>('landing');
+  const [currentScreen, setCurrentScreen] = useState<'landing' | 'login' | 'onboarding' | 'dashboard' | 'rider-onboarding'>('landing');
 
   return (
     <>
@@ -13,6 +14,7 @@ function App() {
         <LandingPage 
           onLoginClick={() => setCurrentScreen('login')} 
           onOnboardingClick={() => setCurrentScreen('onboarding')}
+          onRiderOnboardingClick={() => setCurrentScreen('rider-onboarding')}
         />
       )}
       {currentScreen === 'login' && (
@@ -27,6 +29,9 @@ function App() {
           onClose={() => setCurrentScreen('landing')} 
           onComplete={() => setCurrentScreen('dashboard')}
         />
+      )}
+      {currentScreen === 'rider-onboarding' && (
+        <RiderOnboarding onClose={() => setCurrentScreen('landing')} />
       )}
       {currentScreen === 'dashboard' && (
         <CustomerDashboard onLogout={() => setCurrentScreen('landing')} />

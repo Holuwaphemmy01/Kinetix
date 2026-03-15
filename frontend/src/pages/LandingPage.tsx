@@ -3,9 +3,10 @@ import React from 'react';
 interface LandingPageProps {
   onLoginClick: () => void;
   onOnboardingClick: () => void;
+  onRiderOnboardingClick: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onOnboardingClick }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onOnboardingClick, onRiderOnboardingClick }) => {
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased font-display">
       {/* Header/Navbar */}
@@ -60,7 +61,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onOnboardingCli
                   Book a Delivery (NGN)
                   <span className="material-symbols-outlined text-sm">arrow_forward</span>
                 </button>
-                <button className="bg-surface border border-border-subtle hover:bg-primary/5 text-slate-100 px-8 py-4 rounded-xl font-bold transition-all">
+                <button 
+                  onClick={onRiderOnboardingClick}
+                  className="bg-surface border border-border-subtle hover:bg-primary/5 text-slate-100 px-8 py-4 rounded-xl font-bold transition-all"
+                >
                   Become a Rider
                 </button>
               </div>
@@ -276,7 +280,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onOnboardingCli
                   <span className="material-symbols-outlined text-white text-5xl mb-6">pedal_bike</span>
                   <h3 className="text-3xl font-bold mb-4">I am a Rider</h3>
                   <p className="text-slate-400 mb-8 leading-relaxed">Get paid in real-time. Access your earnings every kilometer. Improve your trust score and access better delivery rates.</p>
-                  <button className="mt-auto bg-white text-background-dark py-4 rounded-xl font-bold hover:bg-primary transition-colors">Apply to Ride</button>
+                  <button 
+                    onClick={onRiderOnboardingClick}
+                    className="mt-auto bg-white text-background-dark py-4 rounded-xl font-bold hover:bg-primary transition-colors"
+                  >
+                    Apply to Ride
+                  </button>
                 </div>
               </div>
             </div>

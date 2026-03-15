@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 
 interface LoginPageProps {
   onBack?: () => void;
+  onSignUpClick: () => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
+const LoginPage: React.FC<LoginPageProps> = ({ onBack, onSignUpClick }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -140,7 +141,12 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
           <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
             <p className="text-slate-600 dark:text-slate-400 text-sm">
               Don't have an account? 
-              <a className="text-primary font-bold hover:underline ml-1" href="#">Sign Up</a>
+              <button 
+                onClick={onSignUpClick}
+                className="text-primary font-bold hover:underline ml-1"
+              >
+                Sign Up
+              </button>
             </p>
           </div>
         </div>

@@ -2,9 +2,10 @@ import React from 'react';
 
 interface LandingPageProps {
   onLoginClick: () => void;
+  onOnboardingClick: () => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onOnboardingClick }) => {
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased font-display">
       {/* Header/Navbar */}
@@ -52,7 +53,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                 Kinetix is the first protocol that converts physical delivery into a verifiable, programmable financial stream. We secure last-mile logistics by streaming payments based on real-time progress.
               </p>
               <div className="flex flex-wrap gap-4">
-                <button className="bg-primary hover:bg-primary/90 text-background-dark px-8 py-4 rounded-xl font-bold transition-all flex items-center gap-2">
+                <button 
+                  onClick={onOnboardingClick}
+                  className="bg-primary hover:bg-primary/90 text-background-dark px-8 py-4 rounded-xl font-bold transition-all flex items-center gap-2"
+                >
                   Book a Delivery (NGN)
                   <span className="material-symbols-outlined text-sm">arrow_forward</span>
                 </button>
@@ -259,7 +263,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <span className="material-symbols-outlined text-primary text-5xl mb-6">shopping_cart</span>
                   <h3 className="text-3xl font-bold mb-4">I am a Customer</h3>
                   <p className="text-slate-400 mb-8 leading-relaxed">Book secure deliveries with escrow protection. Only pay for the distance your items actually travel. No more prepayment anxiety.</p>
-                  <button className="mt-auto bg-primary text-background-dark py-4 rounded-xl font-bold hover:bg-white transition-colors">Book Now</button>
+                  <button 
+                    onClick={onOnboardingClick}
+                    className="mt-auto bg-primary text-background-dark py-4 rounded-xl font-bold hover:bg-white transition-colors"
+                  >
+                    Book Now
+                  </button>
                 </div>
               </div>
               <div className="relative group overflow-hidden rounded-3xl p-1 bg-gradient-to-br from-slate-700 to-border-subtle">

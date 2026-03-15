@@ -7,8 +7,17 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const isFormValid = email.trim() !== '' && password.trim() !== '';
+  // Email regex: basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // Password regex: min 8 chars, at least one letter, one number, and one symbol
+  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/~`|\\-]).{8,}$/;
+
+  const isEmailValid = emailRegex.test(email);
+  const isPasswordValid = passwordRegex.test(password);
+
+  const isFormValid = isEmailValid && isPasswordValid;
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col relative overflow-hidden">
@@ -46,17 +55,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
           <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
             {/* Input Fields */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1 text-left block">Email or Phone Number</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1 text-left block">Email Address</label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">mail</span>
                 <input 
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500" 
-                  placeholder="Enter your credentials" 
-                  type="text"
+                  className={`w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500 ${
+                    email && !isEmailValid ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
+                  }`} 
+                  placeholder="Enter your email" 
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+              {email && !isEmailValid && (
+                <p className="text-[10px] text-red-500 ml-1">Please enter a valid email address.</p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -67,13 +81,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
                 <input 
-                  className="w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500" 
+                  className={`w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500 ${
+                    password && !isPasswordValid ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
+                  }`} 
                   placeholder="••••••••" 
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
-                <button className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg hover:text-primary transition-colors" type="button">visibility</button>
+                <button 
+                  className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg hover:text-primary transition-colors" 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </button>
+              </div>
+              <div className="space-y-1 mt-1">
+                <p className={`text-[10px] ml-1 transition-colors ${password.length >= 8 ? 'text-primary' : 'text-slate-500'}`}>
+                  • Minimum 8 characters
+                </p>
+                <p className={`text-[10px] ml-1 transition-colors ${/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/~`|\\-])/.test(password) ? 'text-primary' : 'text-slate-500'}`}>
+                  • Includes letters, numbers, and symbols
+                </p>
               </div>
             </div>
 

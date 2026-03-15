@@ -18,6 +18,12 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const isStep1Valid =
+    formData.fullName.trim() !== '' &&
+    formData.dob.trim() !== '' &&
+    formData.vehicleType.trim() !== '' &&
+    formData.plateNumber.trim() !== '';
+
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
@@ -105,7 +111,14 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                   </div>
 
                   {step === 1 && (
-                    <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={(e) => { e.preventDefault(); setStep(2); }}>
+                    <form
+                      className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!isStep1Valid) return;
+                        setStep(2);
+                      }}
+                    >
                       {/* Full Name */}
                       <div className="flex flex-col gap-2 md:col-span-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
@@ -179,7 +192,12 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                         </button>
                         <button 
                           type="submit"
-                          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-background-dark px-10 py-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 order-1 sm:order-2 shadow-lg shadow-primary/20 active:scale-[0.98]"
+                          disabled={!isStep1Valid}
+                          className={`w-full sm:w-auto px-10 py-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 order-1 sm:order-2 active:scale-[0.98] ${
+                            isStep1Valid
+                              ? 'bg-primary hover:bg-primary/90 text-background-dark shadow-lg shadow-primary/20'
+                              : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                          }`}
                         >
                           Continue to Step 2
                           <span className="material-symbols-outlined">arrow_forward</span>

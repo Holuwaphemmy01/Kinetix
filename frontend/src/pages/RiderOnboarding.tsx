@@ -18,7 +18,11 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
     insuranceExpiry: '',
     licenseFileName: '',
     insuranceFileName: '',
+    vehicleRegFileName: '',
+    password: '',
+    confirmPassword: '',
   });
+  const [consentAccepted, setConsentAccepted] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -44,7 +48,14 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
     formData.insurancePolicy.trim() !== '' &&
     formData.insuranceExpiry.trim() !== '' &&
     formData.licenseFileName.trim() !== '' &&
-    formData.insuranceFileName.trim() !== '';
+    formData.insuranceFileName.trim() !== '' &&
+    formData.vehicleRegFileName.trim() !== '';
+
+  const isStep3Valid =
+    consentAccepted &&
+    formData.password.trim() !== '' &&
+    formData.confirmPassword.trim() !== '' &&
+    formData.password === formData.confirmPassword;
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
@@ -321,6 +332,20 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                           <p className="text-xs text-slate-500">Selected: {formData.insuranceFileName}</p>
                         )}
                       </div>
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Upload Vehicle Registration</label>
+                        <input
+                          name="vehicleRegFileName"
+                          onChange={handleFileChange}
+                          className="block w-full rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm text-slate-700 dark:text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-background-dark file:font-bold hover:file:brightness-110 cursor-pointer"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          required
+                        />
+                        {formData.vehicleRegFileName && (
+                          <p className="text-xs text-slate-500">Selected: {formData.vehicleRegFileName}</p>
+                        )}
+                      </div>
                       <div className="md:col-span-2 flex flex-col sm:flex-row justify-between gap-4 mt-8">
                         <button
                           type="button"
@@ -354,11 +379,127 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                   )}
 
                   {step === 3 && (
-                    <div className="py-20 text-center space-y-4">
-                      <span className="material-symbols-outlined text-6xl text-primary animate-pulse">construction</span>
-                      <h2 className="text-2xl font-bold">Step {step} Coming Soon</h2>
-                      <p className="text-slate-400">We're still setting up the rest of the rider application flow.</p>
-                      <button onClick={() => setStep(step - 1)} className="text-primary hover:underline font-bold transition-all">Go Back</button>
+                    <div className="space-y-8">
+                      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 shadow-xl max-w-4xl mx-auto w-full">
+                        <div className="text-center mb-6">
+                          <h2 className="text-2xl font-bold">Final Review</h2>
+                          <p className="text-slate-500 dark:text-slate-400 mt-2">Confirm your details and create your password.</p>
+                        </div>
+                        <div className="space-y-4 mb-8">
+                          <div className="flex items-center justify-between rounded-lg border border-primary/10 bg-primary/5 p-4">
+                            <p className="text-sm">
+                              <span className="font-semibold">{formData.fullName || '—'}</span>
+                              <span className="mx-2 text-slate-400">•</span>
+                              <span className="text-slate-600">{formData.vehicleType || '—'}</span>
+                              <span className="mx-2 text-slate-400">•</span>
+                              <span className="text-slate-600">{formData.plateNumber || '—'}</span>
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setStep(1)}
+                              className="text-primary text-xs font-bold hover:underline"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                              <span className="material-symbols-outlined text-green-600">check_circle</span>
+                              <div className="text-xs">
+                                <p className="font-semibold">License</p>
+                                <p className="text-slate-500">{formData.licenseFileName ? 'Provided' : 'Missing'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                              <span className="material-symbols-outlined text-green-600">check_circle</span>
+                              <div className="text-xs">
+                                <p className="font-semibold">Insurance</p>
+                                <p className="text-slate-500">{formData.insuranceFileName ? 'Provided' : 'Missing'}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                              <span className="material-symbols-outlined text-green-600">check_circle</span>
+                              <div className="text-xs">
+                                <p className="font-semibold">Registration</p>
+                                <p className="text-slate-500">{formData.vehicleRegFileName ? 'Provided' : 'Missing'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setStep(2)}
+                              className="text-primary text-xs font-bold hover:underline"
+                            >
+                              Edit documents
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Create Password</label>
+                            <input
+                              name="password"
+                              value={formData.password}
+                              onChange={handleInputChange}
+                              className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+                              placeholder="Enter a secure password"
+                              type="password"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Confirm Password</label>
+                            <input
+                              name="confirmPassword"
+                              value={formData.confirmPassword}
+                              onChange={handleInputChange}
+                              className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+                              placeholder="Re-enter your password"
+                              type="password"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 mb-6">
+                          <div className="mt-1">
+                            <input
+                              id="consent"
+                              type="checkbox"
+                              checked={consentAccepted}
+                              onChange={(e) => setConsentAccepted(e.target.checked)}
+                              className="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent"
+                            />
+                          </div>
+                          <label htmlFor="consent" className="text-sm text-slate-600 dark:text-slate-400">
+                            I confirm the details are accurate and the documents provided are authentic.
+                          </label>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setStep(2)}
+                            className="w-full sm:w-auto px-8 py-4 rounded-lg font-semibold text-slate-500 hover:text-primary transition-colors"
+                          >
+                            Go Back
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!isStep3Valid) return;
+                              alert('Application submitted successfully.');
+                            }}
+                            disabled={!isStep3Valid}
+                            className={`w-full sm:w-auto py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                              isStep3Valid
+                                ? 'bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20 active:scale-[0.98]'
+                                : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            Submit Application
+                            <span className="material-symbols-outlined">send</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

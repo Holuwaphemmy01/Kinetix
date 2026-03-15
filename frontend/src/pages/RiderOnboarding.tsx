@@ -11,6 +11,13 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
     dob: '',
     vehicleType: '',
     plateNumber: '',
+    licenseNumber: '',
+    licenseExpiry: '',
+    insuranceProvider: '',
+    insurancePolicy: '',
+    insuranceExpiry: '',
+    licenseFileName: '',
+    insuranceFileName: '',
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -18,11 +25,26 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, files } = e.target;
+    const file = files && files[0];
+    setFormData(prev => ({ ...prev, [name]: file ? file.name : '' }));
+  };
+
   const isStep1Valid =
     formData.fullName.trim() !== '' &&
     formData.dob.trim() !== '' &&
     formData.vehicleType.trim() !== '' &&
     formData.plateNumber.trim() !== '';
+
+  const isStep2Valid =
+    formData.licenseNumber.trim() !== '' &&
+    formData.licenseExpiry.trim() !== '' &&
+    formData.insuranceProvider.trim() !== '' &&
+    formData.insurancePolicy.trim() !== '' &&
+    formData.insuranceExpiry.trim() !== '' &&
+    formData.licenseFileName.trim() !== '' &&
+    formData.insuranceFileName.trim() !== '';
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
@@ -149,12 +171,12 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                       {/* Vehicle Type */}
                       <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Vehicle Type</label>
-                        <div className="relative">
+                        <div className="relative group">
                           <select 
                             name="vehicleType"
                             value={formData.vehicleType}
                             onChange={handleInputChange}
-                            className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all appearance-none pr-10"
+                            className="peer w-full rounded-xl border border-primary/30 bg-primary/5 dark:bg-primary/10 p-4 pr-12 text-slate-900 dark:text-white hover:bg-primary/10 focus:bg-white dark:focus:bg-background-dark/60 focus:border-primary focus:ring-2 focus:ring-primary/30 outline-none transition-all appearance-none shadow-sm"
                             required
                           >
                             <option disabled value="">Select vehicle type</option>
@@ -163,9 +185,7 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                             <option value="van">Van</option>
                             <option value="truck">Truck</option>
                           </select>
-                          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                            expand_more
-                          </span>
+                          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-primary/60 group-focus-within:text-primary transition-transform duration-200 peer-focus:rotate-180">expand_more</span>
                         </div>
                       </div>
                       {/* Vehicle Plate Number */}
@@ -206,7 +226,134 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                     </form>
                   )}
 
-                  {step > 1 && (
+                  {step === 2 && (
+                    <form
+                      className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!isStep2Valid) return;
+                        setStep(3);
+                      }}
+                    >
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Driver’s License Number</label>
+                        <input
+                          name="licenseNumber"
+                          value={formData.licenseNumber}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+                          placeholder="e.g. DL-0123-4567"
+                          type="text"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">License Expiry Date</label>
+                        <input
+                          name="licenseExpiry"
+                          value={formData.licenseExpiry}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all [color-scheme:dark]"
+                          type="date"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Upload Driver’s License</label>
+                        <input
+                          name="licenseFileName"
+                          onChange={handleFileChange}
+                          className="block w-full rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm text-slate-700 dark:text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-background-dark file:font-bold hover:file:brightness-110 cursor-pointer"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          required
+                        />
+                        {formData.licenseFileName && (
+                          <p className="text-xs text-slate-500">Selected: {formData.licenseFileName}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Insurance Provider</label>
+                        <input
+                          name="insuranceProvider"
+                          value={formData.insuranceProvider}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+                          placeholder="e.g. Allied Insurance Ltd"
+                          type="text"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Policy Number</label>
+                        <input
+                          name="insurancePolicy"
+                          value={formData.insurancePolicy}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-500"
+                          placeholder="e.g. PL-9087-XYZ"
+                          type="text"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Insurance Expiry Date</label>
+                        <input
+                          name="insuranceExpiry"
+                          value={formData.insuranceExpiry}
+                          onChange={handleInputChange}
+                          className="w-full rounded-lg border border-slate-200 dark:border-primary/20 bg-slate-50 dark:bg-background-dark/50 p-4 text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all [color-scheme:dark]"
+                          type="date"
+                          required
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Upload Insurance Document</label>
+                        <input
+                          name="insuranceFileName"
+                          onChange={handleFileChange}
+                          className="block w-full rounded-lg border border-primary/30 bg-primary/5 dark:bg-primary/10 p-3 text-sm text-slate-700 dark:text-slate-200 file:mr-4 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-background-dark file:font-bold hover:file:brightness-110 cursor-pointer"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          required
+                        />
+                        {formData.insuranceFileName && (
+                          <p className="text-xs text-slate-500">Selected: {formData.insuranceFileName}</p>
+                        )}
+                      </div>
+                      <div className="md:col-span-2 flex flex-col sm:flex-row justify-between gap-4 mt-8">
+                        <button
+                          type="button"
+                          onClick={() => setStep(1)}
+                          className="w-full sm:w-auto px-8 py-4 rounded-lg font-semibold text-slate-500 hover:text-primary transition-colors"
+                        >
+                          Go Back
+                        </button>
+                        <div className="flex w-full sm:w-auto gap-4">
+                          <button
+                            type="button"
+                            className="w-full sm:w-auto px-8 py-4 rounded-lg font-semibold text-slate-400 hover:text-primary transition-colors"
+                          >
+                            Save Draft
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={!isStep2Valid}
+                            className={`w-full sm:w-auto px-10 py-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
+                              isStep2Valid
+                                ? 'bg-primary hover:bg-primary/90 text-background-dark shadow-lg shadow-primary/20'
+                                : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                            }`}
+                          >
+                            Continue to Step 3
+                            <span className="material-symbols-outlined">arrow_forward</span>
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  )}
+
+                  {step === 3 && (
                     <div className="py-20 text-center space-y-4">
                       <span className="material-symbols-outlined text-6xl text-primary animate-pulse">construction</span>
                       <h2 className="text-2xl font-bold">Step {step} Coming Soon</h2>

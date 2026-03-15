@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 
 interface RiderOnboardingProps {
   onClose: () => void;
@@ -486,7 +487,7 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                           <button
                             onClick={() => {
                               if (!isStep3Valid) return;
-                              alert('Application submitted successfully.');
+                              toast.success('Application submitted successfully.');
                             }}
                             disabled={!isStep3Valid}
                             className={`w-full sm:w-auto py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${

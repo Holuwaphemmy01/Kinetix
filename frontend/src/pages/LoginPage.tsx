@@ -11,13 +11,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
 
   // Email regex: basic email validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // Password regex: min 8 chars, at least one letter, one number, and one symbol
-  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/~`|\\-]).{8,}$/;
 
   const isEmailValid = emailRegex.test(email);
-  const isPasswordValid = passwordRegex.test(password);
 
-  const isFormValid = isEmailValid && isPasswordValid;
+  const isFormValid = isEmailValid && password.trim() !== '';
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col relative overflow-hidden">
@@ -81,9 +78,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">lock</span>
                 <input 
-                  className={`w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500 ${
-                    password && !isPasswordValid ? 'border-red-500' : 'border-slate-200 dark:border-slate-700'
-                  }`} 
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500"
                   placeholder="••••••••" 
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -96,14 +91,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
                 >
                   {showPassword ? 'visibility_off' : 'visibility'}
                 </button>
-              </div>
-              <div className="space-y-1 mt-1">
-                <p className={`text-[10px] ml-1 transition-colors ${password.length >= 8 ? 'text-primary' : 'text-slate-500'}`}>
-                  • Minimum 8 characters
-                </p>
-                <p className={`text-[10px] ml-1 transition-colors ${/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+={}\[\]:;"'<>,.?/~`|\\-])/.test(password) ? 'text-primary' : 'text-slate-500'}`}>
-                  • Includes letters, numbers, and symbols
-                </p>
               </div>
             </div>
 

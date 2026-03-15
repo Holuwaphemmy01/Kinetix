@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface LoginPageProps {
   onBack?: () => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const isFormValid = email.trim() !== '' && password.trim() !== '';
+
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col relative overflow-hidden">
       {/* Background Pattern Decoration */}
@@ -48,6 +53,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500" 
                   placeholder="Enter your credentials" 
                   type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
@@ -63,12 +70,21 @@ const LoginPage: React.FC<LoginPageProps> = ({ onBack }) => {
                   className="w-full pl-10 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-500" 
                   placeholder="••••••••" 
                   type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                 <button className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg hover:text-primary transition-colors" type="button">visibility</button>
               </div>
             </div>
 
-            <button className="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold py-3.5 rounded-lg transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 mt-4">
+            <button 
+              disabled={!isFormValid}
+              className={`w-full font-bold py-3.5 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 mt-4 ${
+                isFormValid 
+                ? 'bg-primary hover:bg-primary/90 text-background-dark shadow-primary/20' 
+                : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50 shadow-none'
+              }`}
+            >
               Sign In 
               <span className="material-symbols-outlined text-lg">arrow_forward</span>
             </button>

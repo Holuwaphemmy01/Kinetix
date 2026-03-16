@@ -319,9 +319,7 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     pickupAddress: '',
-    pickupCity: '',
     dropAddress: '',
-    dropCity: '',
     itemName: '',
     weightKg: '',
     valueNgn: '',
@@ -331,20 +329,15 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
   });
   const step1Valid =
     form.pickupAddress.trim() !== '' &&
-    form.pickupCity.trim() !== '' &&
     form.dropAddress.trim() !== '' &&
-    form.dropCity.trim() !== '' &&
     form.paymentMethod !== '' &&
     form.valueNgn.trim() !== '';
   const isValid =
     form.pickupAddress.trim() !== '' &&
-    form.pickupCity.trim() !== '' &&
     form.dropAddress.trim() !== '' &&
-    form.dropCity.trim() !== '' &&
     form.itemName.trim() !== '' &&
     form.weightKg.trim() !== '' &&
-    form.valueNgn.trim() !== '' &&
-    form.schedule.trim() !== '';
+    form.valueNgn.trim() !== '';
   return (
     <form
       className="space-y-6"
@@ -376,29 +369,11 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup City</label>
-          <input
-            value={form.pickupCity}
-            onChange={(e) => setForm({ ...form, pickupCity: e.target.value })}
-            placeholder="e.g. Lagos"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off Address</label>
           <input
             value={form.dropAddress}
             onChange={(e) => setForm({ ...form, dropAddress: e.target.value })}
             placeholder="Street and number"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off City</label>
-          <input
-            value={form.dropCity}
-            onChange={(e) => setForm({ ...form, dropCity: e.target.value })}
-            placeholder="e.g. Abuja"
             className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>

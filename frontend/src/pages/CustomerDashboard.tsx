@@ -378,28 +378,28 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
         <p className="text-xs font-bold text-primary uppercase">Step {step} of 2</p>
         <div className="text-xs text-slate-500 dark:text-slate-400">All fields are required unless marked optional</div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup Address</label>
-          <input
-            value={form.pickupAddress}
-            onChange={(e) => setForm({ ...form, pickupAddress: e.target.value })}
-            placeholder="Street and number"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off Address</label>
-          <input
-            value={form.dropAddress}
-            onChange={(e) => setForm({ ...form, dropAddress: e.target.value })}
-            placeholder="Street and number"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-      </div>
       {step === 1 && (
         <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup Address</label>
+              <input
+                value={form.pickupAddress}
+                onChange={(e) => setForm({ ...form, pickupAddress: e.target.value })}
+                placeholder="Street and number"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off Address</label>
+              <input
+                value={form.dropAddress}
+                onChange={(e) => setForm({ ...form, dropAddress: e.target.value })}
+                placeholder="Street and number"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Declared Value (₦)</label>

@@ -325,8 +325,7 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     itemName: '',
     weightKg: '',
     valueNgn: '',
-    paymentMethod: 'paystack' as 'paystack' | 'cngn',
-    schedule: '',
+    paymentMethod: '' as '' | 'paystack' | 'cngn',
     notes: '',
     fragile: false,
   });
@@ -335,8 +334,8 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     form.pickupCity.trim() !== '' &&
     form.dropAddress.trim() !== '' &&
     form.dropCity.trim() !== '' &&
-    form.valueNgn.trim() !== '' &&
-    form.schedule.trim() !== '';
+    form.paymentMethod !== '' &&
+    form.valueNgn.trim() !== '';
   const isValid =
     form.pickupAddress.trim() !== '' &&
     form.pickupCity.trim() !== '' &&
@@ -406,7 +405,7 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
       </div>
       {step === 1 && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Declared Value (₦)</label>
               <input
@@ -446,15 +445,6 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
                   </div>
                 </label>
               </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Schedule</label>
-              <input
-                value={form.schedule}
-                onChange={(e) => setForm({ ...form, schedule: e.target.value })}
-                type="datetime-local"
-                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 [color-scheme:dark]"
-              />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -8,6 +8,7 @@ interface CustomerDashboardProps {
 const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'transit' | 'delivered'>('all');
   const [query, setQuery] = useState('');
+  const [showNewDelivery, setShowNewDelivery] = useState(false);
   const deliveries = useMemo(
     () => [
       { id: '#KX-9281', dest: 'Lagos, NG', status: 'In Transit', eta: '2 hours' },
@@ -120,7 +121,10 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-4">
-              <button className="flex items-center gap-2 px-6 py-3 bg-primary text-background-dark rounded-xl font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20">
+              <button
+                onClick={() => setShowNewDelivery(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-primary text-background-dark rounded-xl font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+              >
                 <span className="material-symbols-outlined">add</span>
                 New Delivery
               </button>
@@ -188,19 +192,19 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                   <table className="w-full text-left table-auto">
                     <thead className="bg-slate-50 dark:bg-primary/10 text-xs uppercase text-slate-500 font-bold">
                       <tr>
-                        <th className="px-6 py-4 w-[140px]">ID</th>
-                        <th className="px-6 py-4 w-[320px]">Destination</th>
-                        <th className="px-6 py-4 w-[160px]">Status</th>
-                        <th className="px-6 py-4 w-[140px]">ETA</th>
-                        <th className="px-6 py-4 w-[240px]"></th>
+                        <th className="px-4 py-3">ID</th>
+                        <th className="px-4 py-3">Destination</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">ETA</th>
+                        <th className="px-4 py-3"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/10">
                       {filtered.map(row => (
                         <tr key={row.id} className="text-sm hover:bg-primary/5 transition-colors">
-                          <td className="px-6 py-4 font-medium whitespace-nowrap">{row.id}</td>
-                          <td className="px-6 py-4">{row.dest}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3 font-medium whitespace-nowrap">{row.id}</td>
+                          <td className="px-4 py-3 whitespace-nowrap max-w-[200px] sm:max-w-[260px] truncate">{row.dest}</td>
+                          <td className="px-4 py-3">
                             <span
                               className={`px-2 py-1 rounded-full text-[10px] font-bold ${
                                 row.status === 'In Transit'
@@ -213,8 +217,8 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                               {row.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-slate-500 whitespace-nowrap">{row.eta}</td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{row.eta}</td>
+                          <td className="px-4 py-3">
                             <div className="flex items-center gap-2 justify-end">
                               <button
                                 onClick={() => handleTrack(row.id)}
@@ -277,6 +281,27 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
         </div>
       </main>
 
+      {showNewDelivery && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 p-6 border border-primary/20 shadow-2xl">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">Create New Delivery</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Enter pickup, drop-off and package details.</p>
+              </div>
+              <button
+                onClick={() => setShowNewDelivery(false)}
+                className="h-10 w-10 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="px-6 py-6 text-center text-xs text-slate-500 dark:text-slate-500 border-t border-primary/10">
         <p>© 2024 Kinetix Secure Systems. All rights reserved.</p>
@@ -286,3 +311,187 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
 };
 
 export default CustomerDashboard;
+
+function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
+  const [form, setForm] = useState({
+    pickupAddress: '',
+    pickupCity: '',
+    dropAddress: '',
+    dropCity: '',
+    itemName: '',
+    weightKg: '',
+    valueNgn: '',
+    paymentMethod: 'paystack' as 'paystack' | 'cngn',
+    schedule: '',
+    notes: '',
+    fragile: false,
+  });
+  const isValid =
+    form.pickupAddress.trim() !== '' &&
+    form.pickupCity.trim() !== '' &&
+    form.dropAddress.trim() !== '' &&
+    form.dropCity.trim() !== '' &&
+    form.itemName.trim() !== '' &&
+    form.weightKg.trim() !== '' &&
+    form.valueNgn.trim() !== '' &&
+    form.schedule.trim() !== '';
+  return (
+    <form
+      className="space-y-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!isValid) return;
+        onCreated();
+      }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup Address</label>
+          <input
+            value={form.pickupAddress}
+            onChange={(e) => setForm({ ...form, pickupAddress: e.target.value })}
+            placeholder="Street and number"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup City</label>
+          <input
+            value={form.pickupCity}
+            onChange={(e) => setForm({ ...form, pickupCity: e.target.value })}
+            placeholder="e.g. Lagos"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off Address</label>
+          <input
+            value={form.dropAddress}
+            onChange={(e) => setForm({ ...form, dropAddress: e.target.value })}
+            placeholder="Street and number"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off City</label>
+          <input
+            value={form.dropCity}
+            onChange={(e) => setForm({ ...form, dropCity: e.target.value })}
+            placeholder="e.g. Abuja"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Item Description</label>
+          <input
+            value={form.itemName}
+            onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+            placeholder="e.g. Electronics - Bluetooth Speaker"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Weight (kg)</label>
+          <input
+            value={form.weightKg}
+            onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
+            placeholder="e.g. 2.5"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Declared Value (₦)</label>
+          <input
+            value={form.valueNgn}
+            onChange={(e) => setForm({ ...form, valueNgn: e.target.value })}
+            placeholder="e.g. 45000"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Preferred Payment</label>
+          <div className="flex gap-3">
+            <label className={`flex-1 rounded-lg border p-3 cursor-pointer ${form.paymentMethod === 'paystack' ? 'border-primary bg-primary/5' : 'border-primary/20'}`}>
+              <input
+                type="radio"
+                name="payment"
+                className="sr-only"
+                checked={form.paymentMethod === 'paystack'}
+                onChange={() => setForm({ ...form, paymentMethod: 'paystack' })}
+              />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary">credit_card</span>
+                <span>Paystack</span>
+              </div>
+            </label>
+            <label className={`flex-1 rounded-lg border p-3 cursor-pointer ${form.paymentMethod === 'cngn' ? 'border-primary bg-primary/5' : 'border-primary/20'}`}>
+              <input
+                type="radio"
+                name="payment"
+                className="sr-only"
+                checked={form.paymentMethod === 'cngn'}
+                onChange={() => setForm({ ...form, paymentMethod: 'cngn' })}
+              />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="material-symbols-outlined text-primary">currency_bitcoin</span>
+                <span>cNGN</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Schedule</label>
+          <input
+            value={form.schedule}
+            onChange={(e) => setForm({ ...form, schedule: e.target.value })}
+            type="datetime-local"
+            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 [color-scheme:dark]"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2 md:col-span-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notes</label>
+          <textarea
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+            placeholder="Special instructions for pickup or drop-off"
+            className="min-h-[90px] w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Options</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={form.fragile}
+              onChange={(e) => setForm({ ...form, fragile: e.target.checked })}
+              className="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent"
+            />
+            <span className="text-sm">Fragile item</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="h-11 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!isValid}
+          className={`h-11 px-6 rounded-lg text-sm font-bold ${isValid ? 'bg-primary text-background-dark hover:brightness-110' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'}`}
+        >
+          Create Delivery
+        </button>
+      </div>
+    </form>
+  );
+}

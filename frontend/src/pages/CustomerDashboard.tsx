@@ -282,10 +282,10 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
       </main>
 
       {showNewDelivery && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setShowNewDelivery(false)} />
-          <div className="absolute right-0 top-0 h-full w-full max-w-[520px] bg-white dark:bg-slate-900 border-l border-primary/20 shadow-2xl">
-            <div className="flex items-start justify-between p-4 border-b border-primary/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" aria-hidden onClick={() => setShowNewDelivery(false)} />
+          <div className="relative w-full max-w-[720px] mx-4 rounded-2xl bg-white dark:bg-slate-900 p-6 border border-primary/20 shadow-2xl">
+            <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold">Create New Delivery</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">Enter pickup, drop-off and package details.</p>
@@ -298,7 +298,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                 ×
               </button>
             </div>
-            <div className="p-6 overflow-y-auto h-[calc(100%-64px)]">
+            <div className="max-h-[80vh] overflow-y-auto">
               <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
             </div>
           </div>
@@ -316,6 +316,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
 export default CustomerDashboard;
 
 function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     pickupAddress: '',
     pickupCity: '',
@@ -329,6 +330,13 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     notes: '',
     fragile: false,
   });
+  const step1Valid =
+    form.pickupAddress.trim() !== '' &&
+    form.pickupCity.trim() !== '' &&
+    form.dropAddress.trim() !== '' &&
+    form.dropCity.trim() !== '' &&
+    form.valueNgn.trim() !== '' &&
+    form.schedule.trim() !== '';
   const isValid =
     form.pickupAddress.trim() !== '' &&
     form.pickupCity.trim() !== '' &&
@@ -343,10 +351,21 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
       className="space-y-6"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!isValid) return;
-        onCreated();
+        if (step === 1) {
+          if (!step1Valid) return;
+          setStep(2);
+          return;
+        }
+        if (step === 2) {
+          if (!isValid) return;
+          onCreated();
+        }
       }}
     >
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-primary uppercase">Step {step} of 2</p>
+        <div className="text-xs text-slate-500 dark:text-slate-400">All fields are required unless marked optional</div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup Address</label>
@@ -385,116 +404,140 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
           />
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Item Description</label>
-          <input
-            value={form.itemName}
-            onChange={(e) => setForm({ ...form, itemName: e.target.value })}
-            placeholder="e.g. Electronics - Bluetooth Speaker"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Weight (kg)</label>
-          <input
-            value={form.weightKg}
-            onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
-            placeholder="e.g. 2.5"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Declared Value (₦)</label>
-          <input
-            value={form.valueNgn}
-            onChange={(e) => setForm({ ...form, valueNgn: e.target.value })}
-            placeholder="e.g. 45000"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Preferred Payment</label>
-          <div className="flex gap-3">
-            <label className={`flex-1 rounded-lg border p-3 cursor-pointer ${form.paymentMethod === 'paystack' ? 'border-primary bg-primary/5' : 'border-primary/20'}`}>
+      {step === 1 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Declared Value (₦)</label>
               <input
-                type="radio"
-                name="payment"
-                className="sr-only"
-                checked={form.paymentMethod === 'paystack'}
-                onChange={() => setForm({ ...form, paymentMethod: 'paystack' })}
+                value={form.valueNgn}
+                onChange={(e) => setForm({ ...form, valueNgn: e.target.value })}
+                placeholder="e.g. 45000"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
-              <div className="flex items-center gap-2 text-sm">
-                <span className="material-symbols-outlined text-primary">credit_card</span>
-                <span>Paystack</span>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Preferred Payment</label>
+              <div className="flex gap-3">
+                <label className={`flex-1 rounded-lg border p-3 cursor-pointer ${form.paymentMethod === 'paystack' ? 'border-primary bg-primary/5' : 'border-primary/20'}`}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    className="sr-only"
+                    checked={form.paymentMethod === 'paystack'}
+                    onChange={() => setForm({ ...form, paymentMethod: 'paystack' })}
+                  />
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="material-symbols-outlined text-primary">credit_card</span>
+                    <span>Paystack</span>
+                  </div>
+                </label>
+                <label className={`flex-1 rounded-lg border p-3 cursor-pointer ${form.paymentMethod === 'cngn' ? 'border-primary bg-primary/5' : 'border-primary/20'}`}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    className="sr-only"
+                    checked={form.paymentMethod === 'cngn'}
+                    onChange={() => setForm({ ...form, paymentMethod: 'cngn' })}
+                  />
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="material-symbols-outlined text-primary">currency_bitcoin</span>
+                    <span>cNGN</span>
+                  </div>
+                </label>
               </div>
-            </label>
-            <label className={`flex-1 rounded-lg border p-3 cursor-pointer ${form.paymentMethod === 'cngn' ? 'border-primary bg-primary/5' : 'border-primary/20'}`}>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Schedule</label>
               <input
-                type="radio"
-                name="payment"
-                className="sr-only"
-                checked={form.paymentMethod === 'cngn'}
-                onChange={() => setForm({ ...form, paymentMethod: 'cngn' })}
+                value={form.schedule}
+                onChange={(e) => setForm({ ...form, schedule: e.target.value })}
+                type="datetime-local"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 [color-scheme:dark]"
               />
-              <div className="flex items-center gap-2 text-sm">
-                <span className="material-symbols-outlined text-primary">currency_bitcoin</span>
-                <span>cNGN</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="Special instructions for pickup or drop-off"
+                className="min-h-[90px] w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Options</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.fragile}
+                  onChange={(e) => setForm({ ...form, fragile: e.target.checked })}
+                  className="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent"
+                />
+                <span className="text-sm">Fragile item</span>
               </div>
-            </label>
+            </div>
           </div>
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Schedule</label>
-          <input
-            value={form.schedule}
-            onChange={(e) => setForm({ ...form, schedule: e.target.value })}
-            type="datetime-local"
-            className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 [color-scheme:dark]"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2 md:col-span-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notes</label>
-          <textarea
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="Special instructions for pickup or drop-off"
-            className="min-h-[90px] w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Options</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.fragile}
-              onChange={(e) => setForm({ ...form, fragile: e.target.checked })}
-              className="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent"
-            />
-            <span className="text-sm">Fragile item</span>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="h-11 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!step1Valid}
+              className={`h-11 px-6 rounded-lg text-sm font-bold ${step1Valid ? 'bg-primary text-background-dark hover:brightness-110' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'}`}
+            >
+              Next
+            </button>
           </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="h-11 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={!isValid}
-          className={`h-11 px-6 rounded-lg text-sm font-bold ${isValid ? 'bg-primary text-background-dark hover:brightness-110' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'}`}
-        >
-          Create Delivery
-        </button>
-      </div>
+        </>
+      )}
+      {step === 2 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Item Description</label>
+              <input
+                value={form.itemName}
+                onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+                placeholder="e.g. Electronics - Bluetooth Speaker"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Weight (kg)</label>
+              <input
+                value={form.weightKg}
+                onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
+                placeholder="e.g. 2.5"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="h-11 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              disabled={!isValid}
+              className={`h-11 px-6 rounded-lg text-sm font-bold ${isValid ? 'bg-primary text-background-dark hover:brightness-110' : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'}`}
+            >
+              Create Delivery
+            </button>
+          </div>
+        </>
+      )}
     </form>
   );
 }

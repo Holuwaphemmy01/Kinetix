@@ -328,6 +328,8 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
   const step1Valid =
     form.pickupAddress.trim() !== '' &&
     form.dropAddress.trim() !== '' &&
+    form.itemName.trim() !== '' &&
+    form.weightKg.trim() !== '' &&
     form.paymentMethod !== '' &&
     form.valueNgn.trim() !== '';
   const isValid =
@@ -422,26 +424,32 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notes</label>
-              <textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Special instructions for pickup or drop-off"
-                className="min-h-[90px] w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Item Description</label>
+              <input
+                value={form.itemName}
+                onChange={(e) => setForm({ ...form, itemName: e.target.value })}
+                placeholder="e.g. Electronics - Bluetooth Speaker"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Options</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.fragile}
-                  onChange={(e) => setForm({ ...form, fragile: e.target.checked })}
-                  className="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent"
-                />
-                <span className="text-sm">Fragile item</span>
-              </div>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Weight (kg)</label>
+              <input
+                value={form.weightKg}
+                onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
+                placeholder="e.g. 2.5"
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              />
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={form.fragile}
+              onChange={(e) => setForm({ ...form, fragile: e.target.checked })}
+              className="rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary bg-transparent"
+            />
+            <span className="text-sm">Fragile item</span>
           </div>
           <div className="flex items-center justify-end gap-3">
             <button
@@ -465,21 +473,12 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Item Description</label>
-              <input
-                value={form.itemName}
-                onChange={(e) => setForm({ ...form, itemName: e.target.value })}
-                placeholder="e.g. Electronics - Bluetooth Speaker"
-                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Weight (kg)</label>
-              <input
-                value={form.weightKg}
-                onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
-                placeholder="e.g. 2.5"
-                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="Special instructions for pickup or drop-off"
+                className="min-h-[90px] w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
           </div>

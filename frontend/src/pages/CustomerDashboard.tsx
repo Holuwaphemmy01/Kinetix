@@ -185,21 +185,21 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                     No deliveries match your filters
                   </div>
                 ) : (
-                  <table className="w-full min-w-full text-left table-fixed">
+                  <table className="w-full text-left table-auto">
                     <thead className="bg-slate-50 dark:bg-primary/10 text-xs uppercase text-slate-500 font-bold">
                       <tr>
-                        <th className="px-6 py-4 w-1/5">ID</th>
-                        <th className="px-6 py-4 w-2/5">Destination</th>
-                        <th className="px-6 py-4 w-1/5">Status</th>
-                        <th className="px-6 py-4 w-1/6">ETA</th>
-                        <th className="px-6 py-4 w-1/6"></th>
+                        <th className="px-6 py-4 w-[140px]">ID</th>
+                        <th className="px-6 py-4 w-[320px]">Destination</th>
+                        <th className="px-6 py-4 w-[160px]">Status</th>
+                        <th className="px-6 py-4 w-[140px]">ETA</th>
+                        <th className="px-6 py-4 w-[240px]"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-primary/10">
                       {filtered.map(row => (
                         <tr key={row.id} className="text-sm hover:bg-primary/5 transition-colors">
-                          <td className="px-6 py-4 font-medium break-words">{row.id}</td>
-                          <td className="px-6 py-4 break-words">{row.dest}</td>
+                          <td className="px-6 py-4 font-medium whitespace-nowrap">{row.id}</td>
+                          <td className="px-6 py-4">{row.dest}</td>
                           <td className="px-6 py-4">
                             <span
                               className={`px-2 py-1 rounded-full text-[10px] font-bold ${
@@ -213,19 +213,19 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                               {row.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-slate-500 break-words">{row.eta}</td>
+                          <td className="px-6 py-4 text-slate-500 whitespace-nowrap">{row.eta}</td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2 justify-end">
                               <button
                                 onClick={() => handleTrack(row.id)}
-                                className="h-8 px-3 rounded-lg border border-primary/20 text-xs font-semibold hover:bg-primary/10"
+                                className="h-8 px-3 rounded-lg border border-primary/20 text-xs font-semibold whitespace-nowrap hover:bg-primary/10"
                               >
                                 Track
                               </button>
                               {(row.status === 'In Transit' || row.status === 'Pending') && (
                                 <button
                                   onClick={() => handleMarkDelivered(row.id)}
-                                  className="h-8 px-3 rounded-lg bg-primary text-background-dark text-xs font-bold hover:brightness-110"
+                                  className="h-8 px-3 rounded-lg bg-primary text-background-dark text-xs font-bold whitespace-nowrap hover:brightness-110"
                                 >
                                   Mark Delivered
                                 </button>

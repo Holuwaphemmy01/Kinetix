@@ -1,10 +1,50 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 
 interface CustomerDashboardProps {
   onLogout: () => void;
 }
 
 const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'transit' | 'delivered'>('all');
+  const [query, setQuery] = useState('');
+  const deliveries = useMemo(
+    () => [
+      { id: '#KX-9281', dest: 'Lagos, NG', status: 'In Transit', eta: '2 hours' },
+      { id: '#KX-9275', dest: 'Abuja, NG', status: 'Pending', eta: 'Tomorrow' },
+      { id: '#KX-9260', dest: 'Port Harcourt, NG', status: 'Delivered', eta: 'Completed' },
+      { id: '#KX-9254', dest: 'Ibadan, NG', status: 'In Transit', eta: '45 mins' },
+      { id: '#KX-9249', dest: 'Benin City, NG', status: 'Pending', eta: 'Today 5pm' },
+    ],
+    []
+  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return deliveries.filter(d => {
+      const okStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'pending' && d.status === 'Pending') ||
+        (statusFilter === 'transit' && d.status === 'In Transit') ||
+        (statusFilter === 'delivered' && d.status === 'Delivered');
+      const okQuery = !q || d.id.toLowerCase().includes(q) || d.dest.toLowerCase().includes(q);
+      return okStatus && okQuery;
+    });
+  }, [deliveries, statusFilter, query]);
+  const counts = useMemo(
+    () => ({
+      all: deliveries.length,
+      pending: deliveries.filter(d => d.status === 'Pending').length,
+      transit: deliveries.filter(d => d.status === 'In Transit').length,
+      delivered: deliveries.filter(d => d.status === 'Delivered').length,
+    }),
+    [deliveries]
+  );
+  const handleMarkDelivered = (id: string) => {
+    toast.success(`${id} marked as delivered`);
+  };
+  const handleTrack = (id: string) => {
+    toast.info(`Tracking ${id}`);
+  };
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 flex flex-col">
       {/* Top Navigation */}
@@ -90,45 +130,113 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
               </button>
             </div>
 
-            {/* Recent Deliveries Table Placeholder */}
             <div className="bg-white dark:bg-primary/5 border border-primary/10 rounded-2xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-primary/10 flex items-center justify-between">
-                <h3 className="font-bold">Recent Deliveries</h3>
-                <button className="text-primary text-sm font-semibold hover:underline">View All</button>
+              <div className="p-6 border-b border-primary/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold">Deliveries</h3>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={query}
+                      onChange={e => setQuery(e.target.value)}
+                      placeholder="Search by ID or destination"
+                      className="h-10 w-56 rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <button className="text-primary text-sm font-semibold hover:underline">View All</button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                      statusFilter === 'all' ? 'bg-primary text-background-dark border-primary' : 'border-primary/20 hover:bg-primary/10'
+                    }`}
+                  >
+                    All ({counts.all})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('pending')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                      statusFilter === 'pending' ? 'bg-amber-500 text-white border-amber-500' : 'border-amber-300 text-amber-700 hover:bg-amber-50'
+                    }`}
+                  >
+                    Pending ({counts.pending})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('transit')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                      statusFilter === 'transit' ? 'bg-blue-600 text-white border-blue-600' : 'border-blue-300 text-blue-700 hover:bg-blue-50'
+                    }`}
+                  >
+                    In Transit ({counts.transit})
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('delivered')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                      statusFilter === 'delivered' ? 'bg-green-600 text-white border-green-600' : 'border-green-300 text-green-700 hover:bg-green-50'
+                    }`}
+                  >
+                    Delivered ({counts.delivered})
+                  </button>
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 dark:bg-primary/10 text-xs uppercase text-slate-500 font-bold">
-                    <tr>
-                      <th className="px-6 py-4">ID</th>
-                      <th className="px-6 py-4">Destination</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Estimated Arrival</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-primary/10">
-                    {[
-                      { id: '#KX-9281', dest: 'Lagos, NG', status: 'In Transit', time: '2 hours' },
-                      { id: '#KX-9275', dest: 'Abuja, NG', status: 'Pending', time: 'Tomorrow' },
-                      { id: '#KX-9260', dest: 'Port Harcourt, NG', status: 'Delivered', time: 'Completed' },
-                    ].map((row, i) => (
-                      <tr key={i} className="text-sm hover:bg-primary/5 transition-colors">
-                        <td className="px-6 py-4 font-medium">{row.id}</td>
-                        <td className="px-6 py-4">{row.dest}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
-                            row.status === 'In Transit' ? 'bg-blue-100 text-blue-700' :
-                            row.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-slate-500">{row.time}</td>
+              <div className="overflow-hidden">
+                {filtered.length === 0 ? (
+                  <div className="p-10 text-center text-sm text-slate-500">
+                    No deliveries match your filters
+                  </div>
+                ) : (
+                  <table className="w-full min-w-full text-left table-fixed">
+                    <thead className="bg-slate-50 dark:bg-primary/10 text-xs uppercase text-slate-500 font-bold">
+                      <tr>
+                        <th className="px-6 py-4 w-1/5">ID</th>
+                        <th className="px-6 py-4 w-2/5">Destination</th>
+                        <th className="px-6 py-4 w-1/5">Status</th>
+                        <th className="px-6 py-4 w-1/6">ETA</th>
+                        <th className="px-6 py-4 w-1/6"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-primary/10">
+                      {filtered.map(row => (
+                        <tr key={row.id} className="text-sm hover:bg-primary/5 transition-colors">
+                          <td className="px-6 py-4 font-medium break-words">{row.id}</td>
+                          <td className="px-6 py-4 break-words">{row.dest}</td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                                row.status === 'In Transit'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : row.status === 'Pending'
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-green-100 text-green-700'
+                              }`}
+                            >
+                              {row.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-500 break-words">{row.eta}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 justify-end">
+                              <button
+                                onClick={() => handleTrack(row.id)}
+                                className="h-8 px-3 rounded-lg border border-primary/20 text-xs font-semibold hover:bg-primary/10"
+                              >
+                                Track
+                              </button>
+                              {(row.status === 'In Transit' || row.status === 'Pending') && (
+                                <button
+                                  onClick={() => handleMarkDelivered(row.id)}
+                                  className="h-8 px-3 rounded-lg bg-primary text-background-dark text-xs font-bold hover:brightness-110"
+                                >
+                                  Mark Delivered
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>

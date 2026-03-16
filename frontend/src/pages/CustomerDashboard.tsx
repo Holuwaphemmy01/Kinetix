@@ -282,9 +282,10 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
       </main>
 
       {showNewDelivery && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 p-6 border border-primary/20 shadow-2xl">
-            <div className="flex items-start justify-between mb-4">
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowNewDelivery(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-[520px] bg-white dark:bg-slate-900 border-l border-primary/20 shadow-2xl">
+            <div className="flex items-start justify-between p-4 border-b border-primary/20">
               <div>
                 <h3 className="text-lg font-bold">Create New Delivery</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">Enter pickup, drop-off and package details.</p>
@@ -297,7 +298,9 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                 ×
               </button>
             </div>
-            <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
+            <div className="p-6 overflow-y-auto h-[calc(100%-64px)]">
+              <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
+            </div>
           </div>
         </div>
       )}

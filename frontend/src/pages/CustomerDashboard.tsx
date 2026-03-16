@@ -298,9 +298,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                 ×
               </button>
             </div>
-            <div className="max-h-[70vh] overflow-y-auto">
-              <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
-            </div>
+            <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
           </div>
         </div>
       )}

@@ -49,13 +49,6 @@ const CustomerOnboarding: React.FC<CustomerOnboardingProps> = ({ onClose, onComp
     return `${user.slice(0, 2)}***@${domain}`;
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    if (!phone) return '+234 ••• ••• 7890';
-    const cleaned = phone.replace(/\D/g, '');
-    const last4 = cleaned.slice(-4);
-    return `+234 ••• ••• ${last4 || '7890'}`;
-  };
-
   return (
     <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased min-h-screen">
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">

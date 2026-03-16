@@ -5,6 +5,64 @@ interface CustomerDashboardProps {
   onLogout: () => void;
 }
 
+type VehicleType = 'bicycle' | 'motorbike' | 'van' | 'truck';
+interface LagosPlace { label: string; lat: number; lon: number }
+const LAGOS_PLACES: LagosPlace[] = [
+  { label: 'Ikeja, Lagos', lat: 6.6173, lon: 3.3515 },
+  { label: 'Victoria Island, Lagos', lat: 6.4267, lon: 3.4281 },
+  { label: 'Lekki Phase 1, Lagos', lat: 6.4397, lon: 3.4833 },
+  { label: 'Ikoyi, Lagos', lat: 6.4541, lon: 3.4342 },
+  { label: 'Yaba, Lagos', lat: 6.514, lon: 3.3869 },
+  { label: 'Surulere, Lagos', lat: 6.5, lon: 3.35 },
+  { label: 'Ajah, Lagos', lat: 6.467, lon: 3.6021 },
+  { label: 'Apapa, Lagos', lat: 6.45, lon: 3.35 },
+  { label: 'Magodo, Lagos', lat: 6.6352, lon: 3.3884 },
+  { label: 'Maryland, Lagos', lat: 6.567, lon: 3.37 },
+  { label: 'Oshodi, Lagos', lat: 6.555, lon: 3.338 },
+  { label: 'Ilupeju, Lagos', lat: 6.5513, lon: 3.3564 },
+  { label: 'Ojo, Lagos', lat: 6.465, lon: 3.197 },
+  { label: 'Egbeda, Lagos', lat: 6.6026, lon: 3.3063 },
+  { label: 'Festac Town, Lagos', lat: 6.4969, lon: 3.2519 },
+  { label: 'Makoko, Lagos', lat: 6.5005, lon: 3.3939 },
+  { label: 'Agege, Lagos', lat: 6.6259, lon: 3.325 },
+  { label: 'Mushin, Lagos', lat: 6.541, lon: 3.326 },
+  { label: 'Alimosho, Lagos', lat: 6.6238, lon: 3.2762 },
+  { label: 'Badagry, Lagos', lat: 6.415, lon: 2.892 },
+  { label: 'Epe, Lagos', lat: 6.5846, lon: 3.9833 },
+  { label: 'Ibeju-Lekki, Lagos', lat: 6.493, lon: 3.7387 },
+  { label: 'Isolo, Lagos', lat: 6.5373, lon: 3.3095 },
+  { label: 'Ojota, Lagos', lat: 6.5883, lon: 3.391 },
+  { label: 'Ogudu, Lagos', lat: 6.5912, lon: 3.3943 },
+  { label: 'Gbagada, Lagos', lat: 6.572, lon: 3.393 },
+  { label: 'Shomolu, Lagos', lat: 6.5403, lon: 3.3809 },
+  { label: 'Oniru, Lagos', lat: 6.4278, lon: 3.4507 },
+  { label: 'VGC, Lagos', lat: 6.4596, lon: 3.6136 },
+  { label: 'Sangotedo, Lagos', lat: 6.4696, lon: 3.6405 },
+  { label: 'Ikorodu, Lagos', lat: 6.6194, lon: 3.5105 },
+  { label: 'Mile 2, Lagos', lat: 6.4878, lon: 3.2738 },
+  { label: 'Ojuelegba, Lagos', lat: 6.509, lon: 3.355 },
+  { label: 'Oyingbo, Lagos', lat: 6.4935, lon: 3.3846 },
+];
+interface GPlace {
+  formatted_address?: string;
+  geometry?: { location: { lat(): number; lng(): number } };
+}
+interface Autocomplete {
+  addListener(eventName: 'place_changed', handler: () => void): void;
+  getPlace(): GPlace;
+}
+interface GoogleMapsPlaces {
+  Autocomplete: new (input: HTMLInputElement, opts: { fields: Array<'formatted_address' | 'geometry'> }) => Autocomplete;
+}
+interface GoogleMapsNamespace {
+  places?: GoogleMapsPlaces;
+}
+declare global {
+  interface Window {
+    google?: { maps?: GoogleMapsNamespace };
+  }
+}
+
 const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'transit' | 'delivered'>('all');
   const [query, setQuery] = useState('');
@@ -317,7 +375,11 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     pickupAddress: '',
+    pickupLat: null as null | number,
+    pickupLng: null as null | number,
     dropAddress: '',
+    dropLat: null as null | number,
+    dropLng: null as null | number,
     itemName: '',
     weightKg: '',
     valueNgn: '',
@@ -335,7 +397,21 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     form.paymentMethod !== '' &&
     form.valueNgn.trim() !== '';
 
+  const haversineKm = () => {
+    if (form.pickupLat == null || form.pickupLng == null || form.dropLat == null || form.dropLng == null) return null;
+    const toRad = (v: number) => (v * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(form.dropLat - form.pickupLat);
+    const dLng = toRad(form.dropLng - form.pickupLng);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(form.pickupLat)) * Math.cos(toRad(form.dropLat)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
   const roughDistanceEstimate = () => {
+    const h = haversineKm();
+    if (h && h > 0) return Math.max(1, Math.round(h));
     const a = form.pickupAddress.trim();
     const b = form.dropAddress.trim();
     if (!a || !b) return 10;
@@ -383,20 +459,20 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pickup Address</label>
-              <input
+              <AddressAutocomplete
                 value={form.pickupAddress}
-                onChange={(e) => setForm({ ...form, pickupAddress: e.target.value })}
-                placeholder="Street and number"
-                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                onChange={(v) => setForm({ ...form, pickupAddress: v })}
+                onPlace={(addr, lat, lng) => setForm({ ...form, pickupAddress: addr, pickupLat: lat, pickupLng: lng })}
+                placeholder="Search address"
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Drop-off Address</label>
-              <input
+              <AddressAutocomplete
                 value={form.dropAddress}
-                onChange={(e) => setForm({ ...form, dropAddress: e.target.value })}
-                placeholder="Street and number"
-                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                onChange={(v) => setForm({ ...form, dropAddress: v })}
+                onPlace={(addr, lat, lng) => setForm({ ...form, dropAddress: addr, dropLat: lat, dropLng: lng })}
+                placeholder="Search address"
               />
             </div>
           </div>
@@ -496,7 +572,7 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Vehicle Type</label>
               <select
                 value={form.vehicleType}
-                onChange={(e) => setForm({ ...form, vehicleType: e.target.value as any })}
+                onChange={(e) => setForm({ ...form, vehicleType: e.target.value as VehicleType })}
                 className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
               >
                 <option value="">Select vehicle</option>
@@ -542,5 +618,173 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
         </>
       )}
     </form>
+  );
+}
+
+function AddressAutocomplete({
+  value,
+  onChange,
+  onPlace,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onPlace: (addr: string, lat: number, lng: number) => void;
+  placeholder?: string;
+}) {
+  const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
+  const forceOsm = import.meta.env?.VITE_USE_OSM === '1';
+  const useOsm = forceOsm || !key;
+  const [loaded, setLoaded] = useState<boolean>(!!window.google?.maps?.places);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const [items, setItems] = useState<Array<{ label: string; lat: number; lon: number }>>([]);
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState(value);
+  const [active, setActive] = useState<number | null>(null);
+  React.useEffect(() => {
+    setQ(value);
+  }, [value]);
+  React.useEffect(() => {
+    if (useOsm) return;
+    if (loaded || window.google?.maps?.places) return;
+    const s = document.createElement('script');
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    s.async = true;
+    s.onload = () => setLoaded(true);
+    document.head.appendChild(s);
+  }, [loaded, useOsm, key]);
+  React.useEffect(() => {
+    if (useOsm) return;
+    if (!window.google?.maps?.places || !inputRef.current) return;
+    const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
+      fields: ['formatted_address', 'geometry'],
+    });
+    ac.addListener('place_changed', () => {
+      const p = ac.getPlace();
+      const addr = p.formatted_address || inputRef.current?.value || '';
+      const lat = p.geometry?.location?.lat?.() ?? null;
+      const lng = p.geometry?.location?.lng?.() ?? null;
+      if (lat != null && lng != null) onPlace(addr, lat, lng);
+      else onChange(addr);
+    });
+  }, [loaded, useOsm, onChange, onPlace]);
+  React.useEffect(() => {
+    if (!useOsm) return;
+    const controller = new AbortController();
+    const run = async () => {
+      const qq = q.trim();
+      if (!qq) {
+        setItems([]);
+        setOpen(false);
+        return;
+      }
+      try {
+        const u = new URL('https://nominatim.openstreetmap.org/search');
+        u.searchParams.set('format', 'jsonv2');
+        u.searchParams.set('addressdetails', '1');
+        u.searchParams.set('limit', '8');
+        u.searchParams.set('countrycodes', 'ng');
+        const qParam = qq.toLowerCase().includes('lagos') ? qq : `${qq}, Lagos, Nigeria`;
+        u.searchParams.set('q', qParam);
+        u.searchParams.set('viewbox', '3.1,6.7,3.6,6.3');
+        u.searchParams.set('bounded', '1');
+        const r = await fetch(u.toString(), {
+          signal: controller.signal,
+          headers: { 'Accept-Language': 'en' },
+        });
+        if (!r.ok) throw new Error('search failed');
+        const data = (await r.json()) as Array<{ display_name: string; lat: string; lon: string }>;
+        const next = (data || []).map((d) => ({
+          label: d.display_name,
+          lat: parseFloat(d.lat),
+          lon: parseFloat(d.lon),
+        }));
+        if (next.length > 0) {
+          setItems(next);
+          setOpen(true);
+        } else {
+          const qn = qq.toLowerCase();
+          const local = LAGOS_PLACES.filter((p) => p.label.toLowerCase().includes(qn)).slice(0, 8);
+          setItems(local);
+          setOpen(local.length > 0);
+        }
+      } catch {
+        const qn = qq.toLowerCase();
+        const local = LAGOS_PLACES.filter((p) => p.label.toLowerCase().includes(qn)).slice(0, 8);
+        setItems(local);
+        setOpen(local.length > 0);
+      }
+    };
+    const t = setTimeout(run, 300);
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [q, useOsm]);
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          onChange(e.target.value);
+          if (useOsm) setOpen(true);
+        }}
+        onFocus={() => {
+          if (useOsm && items.length > 0) setOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (!useOsm || !open || items.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActive((p) => {
+              if (p == null) return 0;
+              return Math.min(items.length - 1, p + 1);
+            });
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive((p) => {
+              if (p == null) return items.length - 1;
+              return Math.max(0, p - 1);
+            });
+          } else if (e.key === 'Enter' && active != null) {
+            e.preventDefault();
+            const it = items[active];
+            const addr = it.label;
+            setQ(addr);
+            setOpen(false);
+            onPlace(addr, it.lat, it.lon);
+          } else if (e.key === 'Escape') {
+            setOpen(false);
+          }
+        }}
+        placeholder={placeholder || 'Search address'}
+        className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+      />
+      {useOsm && open && items.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark shadow-lg max-h-72 overflow-auto">
+          {items.map((it, i) => (
+            <button
+              key={`${it.label}-${i}`}
+              type="button"
+              onMouseEnter={() => setActive(i)}
+              onMouseLeave={() => setActive(null)}
+              onClick={() => {
+                const addr = it.label;
+                setQ(addr);
+                setOpen(false);
+                onPlace(addr, it.lat, it.lon);
+              }}
+              className={`block w-full text-left px-3 py-2 text-sm hover:bg-primary/10 ${
+                active === i ? 'bg-primary/10' : ''
+              }`}
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

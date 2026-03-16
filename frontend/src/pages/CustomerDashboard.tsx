@@ -322,6 +322,8 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     weightKg: '',
     valueNgn: '',
     paymentMethod: '' as '' | 'paystack' | 'cngn',
+    vehicleType: '' as '' | 'bicycle' | 'motorbike' | 'van' | 'truck',
+    offerAmount: '',
     notes: '',
     fragile: false,
   });
@@ -332,12 +334,30 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     form.weightKg.trim() !== '' &&
     form.paymentMethod !== '' &&
     form.valueNgn.trim() !== '';
+
+  const roughDistanceEstimate = () => {
+    const a = form.pickupAddress.trim();
+    const b = form.dropAddress.trim();
+    if (!a || !b) return 10;
+    const diff = Math.abs(a.length - b.length);
+    return Math.max(5, Math.min(30, 5 + diff));
+  };
+  const baseRates: Record<string, number> = { bicycle: 1500, motorbike: 2000, van: 4000, truck: 8000 };
+  const perKm: Record<string, number> = { bicycle: 50, motorbike: 80, van: 120, truck: 180 };
+  const km = roughDistanceEstimate();
+  const vt = form.vehicleType || 'motorbike';
+  const w = parseFloat(form.weightKg) || 0;
+  const weightFactor = 1 + Math.max(0, w) * 0.05; // +5% per kg
+  const minAmount = Math.round((baseRates[vt] + perKm[vt] * km) * weightFactor);
+
   const isValid =
     form.pickupAddress.trim() !== '' &&
     form.dropAddress.trim() !== '' &&
     form.itemName.trim() !== '' &&
     form.weightKg.trim() !== '' &&
-    form.valueNgn.trim() !== '';
+    form.valueNgn.trim() !== '' &&
+    form.vehicleType !== '' &&
+    (parseFloat(form.offerAmount) || 0) >= minAmount;
   return (
     <form
       className="space-y-6"
@@ -472,14 +492,35 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
       {step === 2 && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Vehicle Type</label>
+              <select
+                value={form.vehicleType}
+                onChange={(e) => setForm({ ...form, vehicleType: e.target.value as any })}
+                className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
+              >
+                <option value="">Select vehicle</option>
+                <option value="bicycle">Bicycle</option>
+                <option value="motorbike">Motorbike</option>
+                <option value="van">Van</option>
+                <option value="truck">Truck</option>
+              </select>
+            </div>
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Notes</label>
-              <textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                placeholder="Special instructions for pickup or drop-off"
-                className="min-h-[90px] w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-              />
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Offer Amount (₦)</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={minAmount}
+                  value={form.offerAmount}
+                  onChange={(e) => setForm({ ...form, offerAmount: e.target.value })}
+                  placeholder={`≥ ₦${minAmount.toLocaleString()}`}
+                  className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Minimum for selected vehicle and distance: <span className="font-semibold">₦{minAmount.toLocaleString()}</span>
+              </p>
             </div>
           </div>
           <div className="flex items-center justify-end gap-3">

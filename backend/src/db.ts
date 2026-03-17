@@ -101,3 +101,46 @@ export async function upsertPayment(input: {
       updated_at = NOW()
   `);
 }
+
+export type CorridorPoint = { lat: number; lng: number };
+
+export async function upsertTripCorridor(input: { tripId: string; corridor: CorridorPoint[]; bufferMeters: number }) {
+  await dbQuery((sql: any) => sql`
+    INSERT INTO trips (id, corridor, corridor_buffer_meters, updated_at)
+    VALUES (${input.tripId}, ${sql.json(input.corridor)}, ${input.bufferMeters}, NOW())
+    ON CONFLICT (id)
+    DO UPDATE SET
+      corridor = EXCLUDED.corridor,
+      corridor_buffer_meters = EXCLUDED.corridor_buffer_meters,
+      updated_at = NOW()
+  `);
+}
+
+export async function getTripCorridor(tripId: string): Promise<{ corridor: CorridorPoint[]; bufferMeters: number } | null> {
+  const rows = await dbQuery((sql: any) => sql<{ corridor: CorridorPoint[] | null; corridor_buffer_meters: number }[]>`
+    SELECT corridor, corridor_buffer_meters
+    FROM trips
+    WHERE id = ${tripId}
+    LIMIT 1
+  `) as Array<{ corridor: CorridorPoint[] | null; corridor_buffer_meters: number }>;
+  if (!rows.length || !rows[0].corridor) return null;
+  return { corridor: rows[0].corridor, bufferMeters: rows[0].corridor_buffer_meters || 80 };
+}
+
+export async function setTripFrozen(tripId: string, frozen: boolean) {
+  await dbQuery((sql: any) => sql`
+    INSERT INTO trips (id, frozen, updated_at)
+    VALUES (${tripId}, ${frozen}, NOW())
+    ON CONFLICT (id)
+    DO UPDATE SET
+      frozen = EXCLUDED.frozen,
+      updated_at = NOW()
+  `);
+}
+
+export async function addTripEvent(tripId: string, eventType: string, payload: unknown) {
+  await dbQuery((sql: any) => sql`
+    INSERT INTO trip_events (trip_id, event_type, payload)
+    VALUES (${tripId}, ${eventType}, ${sql.json(payload)})
+  `);
+}

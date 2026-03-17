@@ -2,8 +2,9 @@ import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import { haversineKm, getState } from "../services/progress";
 import { toIdHex } from "../vault";
-import { recordProgress } from "../db";
+import { addTripEvent, getTripCorridor, recordProgress, setTripFrozen } from "../db";
 import { TICK_AMOUNT_CNGN } from "../config";
+import { minDistanceToCorridorMeters, reverseVectorScore } from "../services/corridor";
 
 export function registerGpsRoutes(app: FastifyInstance, vault: any) {
   const gpsSchema = z.object({
@@ -24,9 +25,40 @@ export function registerGpsRoutes(app: FastifyInstance, vault: any) {
     const dKm = haversineKm(body.lat, body.lng, body.dropLat, body.dropLng);
     const s = getState(body.tripId);
     const prev = s.lastDist;
+    const prevLat = s.lastLat;
+    const prevLng = s.lastLng;
     s.lastDist = dKm;
     s.lastLat = body.lat;
     s.lastLng = body.lng;
+    const corridorCfg = await getTripCorridor(body.tripId).catch(() => null);
+    if (corridorCfg) {
+      const minMeters = minDistanceToCorridorMeters({ lat: body.lat, lng: body.lng }, corridorCfg.corridor);
+      let score = 1;
+      if (prevLat != null && prevLng != null) {
+        score = reverseVectorScore(
+          { lat: prevLat, lng: prevLng },
+          { lat: body.lat, lng: body.lng },
+          { lat: body.dropLat, lng: body.dropLng }
+        );
+      }
+      const shouldFreeze = minMeters > corridorCfg.bufferMeters || score < -0.2;
+      const shouldUnfreeze = s.frozen && minMeters <= Math.max(30, Math.floor(corridorCfg.bufferMeters * 0.6)) && score >= -0.1;
+      if (!s.frozen && shouldFreeze) {
+        s.frozen = true;
+        try {
+          await vault.reportDeviation(idHex, BigInt(Math.floor(score * 1000)));
+        } catch {}
+        await setTripFrozen(body.tripId, true).catch(() => null);
+        await addTripEvent(body.tripId, "freeze", { minMeters, bufferMeters: corridorCfg.bufferMeters, vectorScore: score }).catch(() => null);
+      } else if (shouldUnfreeze) {
+        s.frozen = false;
+        try {
+          await vault.reportReentry(idHex);
+        } catch {}
+        await setTripFrozen(body.tripId, false).catch(() => null);
+        await addTripEvent(body.tripId, "unfreeze", { minMeters, bufferMeters: corridorCfg.bufferMeters, vectorScore: score }).catch(() => null);
+      }
+    }
     if (prev != null && dKm < prev) {
       const advanced = (prev - dKm) * 1000;
       s.accum += advanced;

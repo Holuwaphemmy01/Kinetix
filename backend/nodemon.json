@@ -1,8 +1,9 @@
 {
-  "watch": ["src", ".env"],
-  "ext": "ts,json,env",
-  "ignore": ["dist", "node_modules"],
+  "watch": ["src/**/*.ts"],
+  "ext": "ts",
+  "ignore": ["dist/**", "node_modules/**", "migrations/**", "*.log", ".env"],
   "exec": "tsx src/server.ts",
   "signal": "SIGINT",
-  "delay": "250"
+  "delay": "1000",
+  "legacyWatch": true
 }

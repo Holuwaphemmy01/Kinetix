@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 
 interface RiderOnboardingProps {
   onClose: () => void;
+  onComplete?: () => void;
 }
 
 const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
@@ -488,6 +489,7 @@ const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
                             onClick={() => {
                               if (!isStep3Valid) return;
                               toast.success('Application submitted successfully.');
+                              if (typeof onComplete === 'function') onComplete();
                             }}
                             disabled={!isStep3Valid}
                             className={`w-full sm:w-auto py-4 px-8 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${

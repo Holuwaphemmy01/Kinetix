@@ -7,6 +7,7 @@ import CustomerOnboarding from './pages/CustomerOnboarding';
 import CustomerDashboard from './pages/CustomerDashboard';
 import RiderOnboarding from './pages/RiderOnboarding';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import LogisticsDashboard from './pages/LogisticsDashboard';
 
 function App() {
   const navigate = useNavigate();
@@ -50,7 +51,11 @@ function App() {
             />
           }
         />
-        <Route path="/onboarding/rider" element={<RiderOnboarding onClose={() => navigate('/')} />} />
+        <Route
+          path="/onboarding/rider"
+          element={<RiderOnboarding onClose={() => navigate('/')} onComplete={() => navigate('/logistics-dashboard')} />}
+        />
+        <Route path="/logistics-dashboard" element={<LogisticsDashboard onLogout={() => navigate('/')} />} />
         <Route path="/customer-dashboard" element={<CustomerDashboard onLogout={() => navigate('/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

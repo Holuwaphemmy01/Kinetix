@@ -8,7 +8,8 @@
     "dev:tsx": "tsx src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.json",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "simulate:gps": "tsx src/scripts/simulateGps.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

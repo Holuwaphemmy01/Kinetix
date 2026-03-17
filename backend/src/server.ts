@@ -5,11 +5,12 @@ import { initVault } from "./vault";
 import { registerGpsRoutes } from "./routes/gps";
 import { registerTripRoutes } from "./routes/trips";
 import { registerWebhookRoutes } from "./routes/webhooks";
+import { registerHealthRoutes } from "./routes/health";
 import { PORT } from "./config";
 import { runMigrations } from "./migrations";
 
 const app = fastify({ logger: true });
-const { contract: vault } = initVault();
+const { contract: vault, provider } = initVault();
 
 app.register(rawBody, {
   field: "rawBody",
@@ -22,6 +23,7 @@ app.register(rawBody, {
 registerGpsRoutes(app, vault);
 registerTripRoutes(app, vault);
 registerWebhookRoutes(app, vault);
+registerHealthRoutes(app, { provider, vault });
 
 async function initDbWithRetry() {
   const maxAttempts = 5;

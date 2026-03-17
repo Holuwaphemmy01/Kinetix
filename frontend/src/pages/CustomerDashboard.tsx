@@ -75,27 +75,10 @@ declare global {
   }
 }
 
-function fnv1a(input: string) {
-  let h = 2166136261;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
-  }
-  return ('00000000' + (h >>> 0).toString(16)).slice(-8);
-}
-function makeShortQrText(p: { ref?: string; pickup: string; drop: string; item: string; vehicle: string; offer: number }) {
-  const ts = Math.floor(Date.now() / 1000).toString(36);
-  const base = `${p.ref ?? ''}|${p.pickup}|${p.drop}|${p.item}|${p.vehicle}|${p.offer}|${ts}`;
-  const id = fnv1a(base);
-  return `KX|ref=${p.ref ?? 'N/A'}|id=${id}|t=${ts}`;
-}
-
 const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'transit' | 'delivered'>('all');
   const [query, setQuery] = useState('');
   const [showNewDelivery, setShowNewDelivery] = useState(false);
-  const [showDeliveryQR, setShowDeliveryQR] = useState(false);
-  const [qrText, setQrText] = useState('');
   const deliveries = useMemo(
     () => [
       { id: '#KX-9281', dest: 'Lagos, NG', status: 'In Transit', eta: '2 hours' },
@@ -385,46 +368,7 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                 ×
               </button>
             </div>
-            <NewDeliveryForm
-              onCancel={() => setShowNewDelivery(false)}
-              onCreated={(payload) => {
-                setShowNewDelivery(false);
-                const txt = makeShortQrText(payload);
-                setQrText(txt);
-                setShowDeliveryQR(true);
-                toast.success('Delivery created');
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {showDeliveryQR && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" aria-hidden onClick={() => setShowDeliveryQR(false)} />
-          <div className="relative w-full max-w-[480px] mx-4 rounded-2xl bg-white dark:bg-slate-900 p-6 border border-primary/20 shadow-2xl">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-bold">Delivery QR Code</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">Share or scan to verify pickup/drop-off.</p>
-              </div>
-              <button
-                onClick={() => setShowDeliveryQR(false)}
-                className="h-10 w-10 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center"
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <QRView text={qrText} />
-            <div className="flex items-center justify-end gap-3 mt-4">
-              <button
-                onClick={() => setShowDeliveryQR(false)}
-                className="h-11 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
-              >
-                Done
-              </button>
-            </div>
+            <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
           </div>
         </div>
       )}
@@ -442,10 +386,7 @@ export default CustomerDashboard;
 function NewDeliveryForm({
   onCancel,
   onCreated,
-}: {
-  onCancel: () => void;
-  onCreated: (payload: { ref?: string; offer: number; pickup: string; drop: string; item: string; vehicle: string }) => void;
-}) {
+}: { onCancel: () => void; onCreated: () => void }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     pickupAddress: '',
@@ -567,26 +508,12 @@ function NewDeliveryForm({
               const amt = parseFloat(form.offerAmount) || 0;
               const res = await startPaystackCheckout(amt);
               toast.success(`Payment successful: ${res.reference}`);
-              onCreated({
-                ref: res.reference,
-                offer: amt,
-                pickup: form.pickupAddress,
-                drop: form.dropAddress,
-                item: form.itemName,
-                vehicle: form.vehicleType,
-              });
+              onCreated();
             } catch {
               toast.error('Payment not completed');
             }
           } else {
-            onCreated({
-              ref: undefined,
-              offer: parseFloat(form.offerAmount) || 0,
-              pickup: form.pickupAddress,
-              drop: form.dropAddress,
-              item: form.itemName,
-              vehicle: form.vehicleType,
-            });
+            onCreated();
           }
         }
       }}
@@ -774,58 +701,6 @@ function NewDeliveryForm({
         </>
       )}
     </form>
-  );
-}
-
-function QRView({ text }: { text: string }) {
-  const hostReady = !!window.QRCode;
-  const [ready, setReady] = useState(hostReady);
-  const boxRef = React.useRef<HTMLDivElement | null>(null);
-  React.useEffect(() => {
-    if (ready && boxRef.current) {
-      boxRef.current.innerHTML = '';
-      const content = text.length > 128 ? makeShortQrText({ ref: text, pickup: '', drop: '', item: '', vehicle: '', offer: 0 }) : text;
-      const level: number =
-        (window as unknown as { QRCode?: { CorrectLevel?: { M?: number } } }).QRCode?.CorrectLevel?.M ?? 0;
-      new window.QRCode!(boxRef.current, {
-        text: content,
-        width: 220,
-        height: 220,
-        colorDark: '#0f172a',
-        colorLight: '#ffffff',
-        correctLevel: level,
-      });
-    }
-  }, [ready, text]);
-  React.useEffect(() => {
-    if (ready) return;
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-    s.async = true;
-    s.onload = () => setReady(true);
-    document.head.appendChild(s);
-  }, [ready]);
-  const download = () => {
-    const el = boxRef.current;
-    if (!el) return;
-    const canvas = el.querySelector('canvas') as HTMLCanvasElement | null;
-    if (!canvas) return;
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'delivery-qr.png';
-    a.click();
-  };
-  return (
-    <div className="flex flex-col items-center">
-      <div ref={boxRef} className="p-4 rounded-xl border border-primary/20 bg-white dark:bg-background-dark" />
-      <button
-        onClick={download}
-        className="mt-3 h-10 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
-      >
-        Download PNG
-      </button>
-    </div>
   );
 }
 

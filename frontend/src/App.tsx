@@ -6,45 +6,54 @@ import LoginPage from './pages/LoginPage';
 import CustomerOnboarding from './pages/CustomerOnboarding';
 import CustomerDashboard from './pages/CustomerDashboard';
 import RiderOnboarding from './pages/RiderOnboarding';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 
 function App() {
-  const [currentScreen, setCurrentScreen] = useState<'landing' | 'login' | 'onboarding' | 'dashboard' | 'rider-onboarding'>('landing');
+  const navigate = useNavigate();
   const [showRolePrompt, setShowRolePrompt] = useState(false);
 
   return (
     <>
-      {currentScreen === 'landing' && (
-        <LandingPage 
-          onLoginClick={() => setCurrentScreen('login')} 
-          onOnboardingClick={() => setCurrentScreen('onboarding')}
-          onRiderOnboardingClick={() => setCurrentScreen('rider-onboarding')}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              onLoginClick={() => navigate('/login')}
+              onOnboardingClick={() => navigate('/onboarding/customer')}
+              onRiderOnboardingClick={() => navigate('/onboarding/rider')}
+            />
+          }
         />
-      )}
-      {currentScreen === 'login' && (
-        <LoginPage 
-          onBack={() => setCurrentScreen('landing')} 
-          onSignUpClick={() => setShowRolePrompt(true)}
-          onLoginSuccess={() => {
-            setCurrentScreen('dashboard');
-            toast.success('Welcome back!');
-          }}
+        <Route
+          path="/login"
+          element={
+            <LoginPage
+              onBack={() => navigate('/')}
+              onSignUpClick={() => setShowRolePrompt(true)}
+              onLoginSuccess={() => {
+                navigate('/customer-dashboard');
+                toast.success('Welcome back!');
+              }}
+            />
+          }
         />
-      )}
-      {currentScreen === 'onboarding' && (
-        <CustomerOnboarding 
-          onClose={() => setCurrentScreen('landing')} 
-          onComplete={() => {
-            setCurrentScreen('dashboard');
-            toast.success('Registration complete');
-          }}
+        <Route
+          path="/onboarding/customer"
+          element={
+            <CustomerOnboarding
+              onClose={() => navigate('/')}
+              onComplete={() => {
+                navigate('/customer-dashboard');
+                toast.success('Registration complete');
+              }}
+            />
+          }
         />
-      )}
-      {currentScreen === 'rider-onboarding' && (
-        <RiderOnboarding onClose={() => setCurrentScreen('landing')} />
-      )}
-      {currentScreen === 'dashboard' && (
-        <CustomerDashboard onLogout={() => setCurrentScreen('landing')} />
-      )}
+        <Route path="/onboarding/rider" element={<RiderOnboarding onClose={() => navigate('/')} />} />
+        <Route path="/customer-dashboard" element={<CustomerDashboard onLogout={() => navigate('/')} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       {showRolePrompt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 border border-primary/20 shadow-2xl space-y-5">
@@ -65,7 +74,7 @@ function App() {
               <button
                 onClick={() => {
                   setShowRolePrompt(false);
-                  setCurrentScreen('onboarding');
+                  navigate('/onboarding/customer');
                   toast.info('Customer onboarding');
                 }}
                 className="rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 p-4 text-left transition-all"
@@ -81,7 +90,7 @@ function App() {
               <button
                 onClick={() => {
                   setShowRolePrompt(false);
-                  setCurrentScreen('rider-onboarding');
+                  navigate('/onboarding/rider');
                   toast.info('Rider onboarding');
                 }}
                 className="rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 p-4 text-left transition-all"

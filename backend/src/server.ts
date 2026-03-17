@@ -1,10 +1,11 @@
 import fastify from "fastify";
-import { ensureTables, checkDbConnection } from "./db";
+import { checkDbConnection } from "./db";
 import { initVault } from "./vault";
 import { registerGpsRoutes } from "./routes/gps";
 import { registerTripRoutes } from "./routes/trips";
 import { registerWebhookRoutes } from "./routes/webhooks";
 import { PORT } from "./config";
+import { runMigrations } from "./migrations";
 
 const app = fastify({ logger: true });
 const { contract: vault } = initVault();
@@ -18,7 +19,7 @@ async function initDbWithRetry() {
   let attempt = 0;
   while (attempt < maxAttempts) {
     try {
-      await ensureTables();
+      await runMigrations();
       const ok = await checkDbConnection();
       app.log.info({ db_connected: ok, attempt }, "db_check");
       if (ok) return;

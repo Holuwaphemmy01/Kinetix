@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import abi from "./abi/KinetixVault.json" assert { type: "json" };
+import abi from "./abi/KinetixVault.json";
 import { SOMNIA_RPC_URL, RELAYER_PRIVATE_KEY, VAULT_ADDRESS } from "./config";
 
 export type VaultDeps = {

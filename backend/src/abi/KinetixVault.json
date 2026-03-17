@@ -1,0 +1,10 @@
+[
+  {"type":"function","name":"depositEscrow","inputs":[{"name":"id","type":"bytes32"},{"name":"customer","type":"address"},{"name":"rider","type":"address"},{"name":"total","type":"uint256"}],"outputs":[]},
+  {"type":"function","name":"tickStream","inputs":[{"name":"id","type":"bytes32"},{"name":"amount","type":"uint256"}],"outputs":[]},
+  {"type":"function","name":"freeze","inputs":[{"name":"id","type":"bytes32"}],"outputs":[]},
+  {"type":"function","name":"unfreeze","inputs":[{"name":"id","type":"bytes32"}],"outputs":[]},
+  {"type":"function","name":"settle","inputs":[{"name":"id","type":"bytes32"}],"outputs":[]},
+  {"type":"function","name":"reportProgress","inputs":[{"name":"id","type":"bytes32"},{"name":"metersAdvanced","type":"uint256"}],"outputs":[]},
+  {"type":"function","name":"reportDeviation","inputs":[{"name":"id","type":"bytes32"},{"name":"vector","type":"int256"}],"outputs":[]},
+  {"type":"function","name":"reportReentry","inputs":[{"name":"id","type":"bytes32"}],"outputs":[]}
+]

@@ -8,6 +8,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import RiderOnboarding from './pages/RiderOnboarding';
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import LogisticsDashboard from './pages/LogisticsDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   const navigate = useNavigate();
@@ -57,6 +58,7 @@ function App() {
         />
         <Route path="/logistics-dashboard" element={<LogisticsDashboard onLogout={() => navigate('/')} />} />
         <Route path="/customer-dashboard" element={<CustomerDashboard onLogout={() => navigate('/')} />} />
+        <Route path="/admin-dashboard" element={<AdminDashboard onLogout={() => navigate('/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {showRolePrompt && (

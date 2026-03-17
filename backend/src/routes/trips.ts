@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { toIdHex } from "../vault";
 import { getState, setFrozen } from "../services/progress";
-import { addTripEvent, listTripEvents, upsertTripCorridor } from "../db";
+import { addTripEvent, getTripSnapshot, listTripEvents, upsertTripCorridor } from "../db";
 
 export function registerTripRoutes(app: FastifyInstance, vault: any) {
   const settleSchema = z.object({ deliveryProof: z.string().min(1) });
@@ -77,5 +77,18 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
     const items = await listTripEvents(id, limit);
     return reply.send({ ok: true, tripId: id, count: items.length, items });
+  });
+
+  app.get("/api/trips/:id", async (req, reply) => {
+    const id = String((req.params as any).id);
+    const snap = await getTripSnapshot(id);
+    if (!snap.trip) {
+      return reply.status(404).send({ ok: false, error: "trip_not_found" });
+    }
+    return reply.send({
+      ok: true,
+      trip: snap.trip,
+      lastEvent: snap.lastEvent
+    });
   });
 }

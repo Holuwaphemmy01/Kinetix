@@ -167,3 +167,55 @@ export async function listTripEvents(tripId: string, limit = 50) {
     created_at: string;
   }>>;
 }
+
+export async function getTripSnapshot(tripId: string) {
+  const tripRows = await dbQuery((sql: any) => sql<{
+    id: string;
+    rider_address: string | null;
+    customer_address: string | null;
+    status: string;
+    frozen: boolean;
+    corridor: CorridorPoint[] | null;
+    corridor_buffer_meters: number;
+    created_at: string;
+    updated_at: string;
+  }[]>`
+    SELECT id, rider_address, customer_address, status, frozen, corridor, corridor_buffer_meters, created_at, updated_at
+    FROM trips
+    WHERE id = ${tripId}
+    LIMIT 1
+  `) as Array<{
+    id: string;
+    rider_address: string | null;
+    customer_address: string | null;
+    status: string;
+    frozen: boolean;
+    corridor: CorridorPoint[] | null;
+    corridor_buffer_meters: number;
+    created_at: string;
+    updated_at: string;
+  }>;
+
+  const eventRows = await dbQuery((sql: any) => sql<{
+    id: number;
+    event_type: string;
+    payload: unknown;
+    created_at: string;
+  }[]>`
+    SELECT id, event_type, payload, created_at
+    FROM trip_events
+    WHERE trip_id = ${tripId}
+    ORDER BY created_at DESC
+    LIMIT 1
+  `) as Array<{
+    id: number;
+    event_type: string;
+    payload: unknown;
+    created_at: string;
+  }>;
+
+  return {
+    trip: tripRows[0] ?? null,
+    lastEvent: eventRows[0] ?? null
+  };
+}

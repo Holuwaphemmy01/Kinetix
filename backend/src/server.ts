@@ -1,5 +1,5 @@
 import fastify from "fastify";
-import { ensureTables } from "./db";
+import { ensureTables, checkDbConnection } from "./db";
 import { initVault } from "./vault";
 import { registerGpsRoutes } from "./routes/gps";
 import { registerTripRoutes } from "./routes/trips";
@@ -19,5 +19,7 @@ app.listen({ port: PORT, host: "0.0.0.0" }).then(async () => {
   } catch (e) {
     app.log.error(e);
   }
+  const ok = await checkDbConnection();
+  app.log.info({ db_connected: ok }, "db_check");
   app.log.info({ port: PORT }, "server_ready");
 });

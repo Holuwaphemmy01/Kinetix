@@ -30,6 +30,15 @@ export async function ensureTables() {
   `);
 }
 
+export async function checkDbConnection(): Promise<boolean> {
+  try {
+    await pool.query("SELECT 1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function recordProgress(input: {
   tripId: string;
   lat: number;

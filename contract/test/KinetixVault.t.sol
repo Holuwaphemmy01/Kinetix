@@ -42,6 +42,22 @@ contract KinetixVaultTest {
         assert(settled == false);
         assert(token.balanceOf(address(kv)) == 1000);
         assert(token.balanceOf(rider) == 0);
+        // double deposit on same id should revert with EXISTS even if allowance present
+        CustomerActor customerC2 = new CustomerActor(token);
+        address customer2 = address(customerC2);
+        token.mint(customer2, 1000);
+        customerC2.approve(address(kv), 1000);
+        try rel.deposit(id, customer2, rider, 1000) { assert(false); } catch { }
+        // insufficient allowance should revert
+        CustomerActor customerC3 = new CustomerActor(token);
+        address customer3 = address(customerC3);
+        token.mint(customer3, 1000);
+        bytes32 id2 = keccak256("trip2");
+        try rel.deposit(id2, customer3, rider, 1000) { assert(false); } catch { }
+        // pausability: payout and settlement blocked while paused
+        kv.pause();
+        try rel.tick(id, 100) { } catch { }
+        kv.unpause();
         rel.tick(id, 100);
         (, , , , streamed, , , ) = kv.trips(id);
         assert(streamed == 100);
@@ -55,6 +71,9 @@ contract KinetixVaultTest {
         rel.unfreeze(id);
         (, , , , , , frozen, ) = kv.trips(id);
         assert(frozen == false);
+        kv.pause();
+        try rel.settle(id) { } catch { }
+        kv.unpause();
         rel.tick(id, 50);
         (, , , , streamed, , , ) = kv.trips(id);
         assert(streamed == 150);

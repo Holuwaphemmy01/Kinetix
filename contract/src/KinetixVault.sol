@@ -12,6 +12,8 @@ contract KinetixVault {
     address public owner;
     address public relayer;
     address public cngn;
+    bool public paused;
+    bool private locked;
 
     constructor(address _relayer, address _cngn) {
         owner = msg.sender;
@@ -36,6 +38,22 @@ contract KinetixVault {
     function setToken(address _c) external onlyOwner {
         cngn = _c;
     }
+    function pause() external onlyOwner {
+        paused = true;
+    }
+    function unpause() external onlyOwner {
+        paused = false;
+    }
+    modifier nonReentrant() {
+        require(!locked, "REENT");
+        locked = true;
+        _;
+        locked = false;
+    }
+    modifier whenNotPaused() {
+        require(!paused, "PAUSE");
+        _;
+    }
 
     struct Trip {
         address customer;
@@ -55,8 +73,11 @@ contract KinetixVault {
     event StreamFrozen(bytes32 indexed id);
     event StreamUnfrozen(bytes32 indexed id);
     event TripSettled(bytes32 indexed id, uint256 paidOperational, uint256 paidHeld);
+    event ProgressReported(bytes32 indexed id, uint256 metersAdvanced, uint256 streamedAfter);
+    event DeviationReported(bytes32 indexed id, int256 vector, uint256 timestamp);
+    event ReentryReported(bytes32 indexed id, uint256 timestamp);
 
-    function depositEscrow(bytes32 id, address customer, address rider, uint256 total) external onlyRelayer {
+    function depositEscrow(bytes32 id, address customer, address rider, uint256 total) external onlyRelayer nonReentrant {
         require(cngn != address(0), "TOK");
         require(trips[id].total == 0, "EXISTS");
         require(IERC20(cngn).allowance(customer, address(this)) >= total, "ALLOW");
@@ -67,7 +88,7 @@ contract KinetixVault {
         emit EscrowCreated(id, customer, rider, total, opCap, held);
     }
 
-    function tickStream(bytes32 id, uint256 amount) external onlyRelayer {
+    function tickStream(bytes32 id, uint256 amount) external onlyRelayer nonReentrant whenNotPaused {
         Trip storage t = trips[id];
         require(t.total != 0, "UNK");
         require(!t.frozen, "FRZ");
@@ -96,12 +117,36 @@ contract KinetixVault {
         }
     }
 
-    function settle(bytes32 id) external onlyRelayer {
+    function settle(bytes32 id) external onlyRelayer nonReentrant whenNotPaused {
         Trip storage t = trips[id];
         require(t.total != 0, "UNK");
         require(!t.settled, "SET");
         t.settled = true;
         require(IERC20(cngn).transfer(t.rider, t.held), "XFERH");
         emit TripSettled(id, t.streamed, t.held);
+    }
+
+    function reportProgress(bytes32 id, uint256 metersAdvanced) external onlyRelayer whenNotPaused {
+        Trip storage t = trips[id];
+        require(t.total != 0, "UNK");
+        emit ProgressReported(id, metersAdvanced, t.streamed);
+    }
+    function reportDeviation(bytes32 id, int256 vector) external onlyRelayer {
+        Trip storage t = trips[id];
+        require(t.total != 0, "UNK");
+        if (!t.frozen) {
+            t.frozen = true;
+            emit StreamFrozen(id);
+        }
+        emit DeviationReported(id, vector, block.timestamp);
+    }
+    function reportReentry(bytes32 id) external onlyRelayer {
+        Trip storage t = trips[id];
+        require(t.total != 0, "UNK");
+        if (t.frozen) {
+            t.frozen = false;
+            emit StreamUnfrozen(id);
+        }
+        emit ReentryReported(id, block.timestamp);
     }
 }

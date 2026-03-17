@@ -60,13 +60,42 @@ interface GoogleMapsNamespace {
 declare global {
   interface Window {
     google?: { maps?: GoogleMapsNamespace };
+    PaystackPop?: {
+      setup: (config: {
+        key: string;
+        email: string;
+        amount: number;
+        ref?: string;
+        currency?: 'NGN';
+        metadata?: Record<string, unknown>;
+        callback: (response: { reference: string }) => void;
+        onClose: () => void;
+      }) => { openIframe: () => void };
+    };
   }
+}
+
+function fnv1a(input: string) {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+  }
+  return ('00000000' + (h >>> 0).toString(16)).slice(-8);
+}
+function makeShortQrText(p: { ref?: string; pickup: string; drop: string; item: string; vehicle: string; offer: number }) {
+  const ts = Math.floor(Date.now() / 1000).toString(36);
+  const base = `${p.ref ?? ''}|${p.pickup}|${p.drop}|${p.item}|${p.vehicle}|${p.offer}|${ts}`;
+  const id = fnv1a(base);
+  return `KX|ref=${p.ref ?? 'N/A'}|id=${id}|t=${ts}`;
 }
 
 const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'transit' | 'delivered'>('all');
   const [query, setQuery] = useState('');
   const [showNewDelivery, setShowNewDelivery] = useState(false);
+  const [showDeliveryQR, setShowDeliveryQR] = useState(false);
+  const [qrText, setQrText] = useState('');
   const deliveries = useMemo(
     () => [
       { id: '#KX-9281', dest: 'Lagos, NG', status: 'In Transit', eta: '2 hours' },
@@ -356,7 +385,46 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
                 ×
               </button>
             </div>
-            <NewDeliveryForm onCancel={() => setShowNewDelivery(false)} onCreated={() => { setShowNewDelivery(false); toast.success('Delivery created'); }} />
+            <NewDeliveryForm
+              onCancel={() => setShowNewDelivery(false)}
+              onCreated={(payload) => {
+                setShowNewDelivery(false);
+                const txt = makeShortQrText(payload);
+                setQrText(txt);
+                setShowDeliveryQR(true);
+                toast.success('Delivery created');
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {showDeliveryQR && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" aria-hidden onClick={() => setShowDeliveryQR(false)} />
+          <div className="relative w-full max-w-[480px] mx-4 rounded-2xl bg-white dark:bg-slate-900 p-6 border border-primary/20 shadow-2xl">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">Delivery QR Code</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">Share or scan to verify pickup/drop-off.</p>
+              </div>
+              <button
+                onClick={() => setShowDeliveryQR(false)}
+                className="h-10 w-10 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <QRView text={qrText} />
+            <div className="flex items-center justify-end gap-3 mt-4">
+              <button
+                onClick={() => setShowDeliveryQR(false)}
+                className="h-11 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -371,7 +439,13 @@ const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ onLogout }) => {
 
 export default CustomerDashboard;
 
-function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
+function NewDeliveryForm({
+  onCancel,
+  onCreated,
+}: {
+  onCancel: () => void;
+  onCreated: (payload: { ref?: string; offer: number; pickup: string; drop: string; item: string; vehicle: string }) => void;
+}) {
   const [step, setStep] = useState<1 | 2>(1);
   const [form, setForm] = useState({
     pickupAddress: '',
@@ -386,6 +460,7 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     paymentMethod: '' as '' | 'paystack' | 'cngn',
     vehicleType: '' as '' | 'bicycle' | 'motorbike' | 'van' | 'truck',
     offerAmount: '',
+    payerEmail: '',
     notes: '',
     fragile: false,
   });
@@ -425,6 +500,7 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
   const w = parseFloat(form.weightKg) || 0;
   const weightFactor = 1 + Math.max(0, w) * 0.05; // +5% per kg
   const minAmount = Math.round((baseRates[vt] + perKm[vt] * km) * weightFactor);
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const isValid =
     form.pickupAddress.trim() !== '' &&
@@ -433,11 +509,51 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
     form.weightKg.trim() !== '' &&
     form.valueNgn.trim() !== '' &&
     form.vehicleType !== '' &&
-    (parseFloat(form.offerAmount) || 0) >= minAmount;
+    (parseFloat(form.offerAmount) || 0) >= minAmount &&
+    (form.paymentMethod !== 'paystack' || emailRegex.test(form.payerEmail));
+  const ensurePaystack = async () => {
+    if (window.PaystackPop) return;
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://js.paystack.co/v1/inline.js';
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Failed to load Paystack'));
+      document.head.appendChild(s);
+    });
+  };
+  const startPaystackCheckout = async (amountNgn: number) => {
+    await ensurePaystack();
+    const key = import.meta.env?.VITE_PAYSTACK_PUBLIC_KEY;
+    if (!key) {
+      toast.error('Missing Paystack public key');
+      throw new Error('Missing Paystack key');
+    }
+    return new Promise<{ reference: string }>((resolve, reject) => {
+      const handler = window.PaystackPop!.setup({
+        key,
+        email: form.payerEmail,
+        amount: Math.round(amountNgn * 100),
+        currency: 'NGN',
+        ref: `KX-${Date.now()}`,
+        metadata: {
+          pickup: form.pickupAddress,
+          drop: form.dropAddress,
+          vehicle: form.vehicleType,
+          item: form.itemName,
+          weightKg: form.weightKg,
+          fragile: form.fragile,
+        },
+        callback: (response) => resolve(response),
+        onClose: () => reject(new Error('Payment closed')),
+      });
+      handler.openIframe();
+    });
+  };
   return (
     <form
       className="space-y-6"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (step === 1) {
           if (!step1Valid) return;
@@ -446,7 +562,32 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
         }
         if (step === 2) {
           if (!isValid) return;
-          onCreated();
+          if (form.paymentMethod === 'paystack') {
+            try {
+              const amt = parseFloat(form.offerAmount) || 0;
+              const res = await startPaystackCheckout(amt);
+              toast.success(`Payment successful: ${res.reference}`);
+              onCreated({
+                ref: res.reference,
+                offer: amt,
+                pickup: form.pickupAddress,
+                drop: form.dropAddress,
+                item: form.itemName,
+                vehicle: form.vehicleType,
+              });
+            } catch {
+              toast.error('Payment not completed');
+            }
+          } else {
+            onCreated({
+              ref: undefined,
+              offer: parseFloat(form.offerAmount) || 0,
+              pickup: form.pickupAddress,
+              drop: form.dropAddress,
+              item: form.itemName,
+              vehicle: form.vehicleType,
+            });
+          }
         }
       }}
     >
@@ -597,6 +738,21 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Minimum for selected vehicle and distance: <span className="font-semibold">₦{minAmount.toLocaleString()}</span>
               </p>
+              {form.paymentMethod === 'paystack' && (
+                <div className="space-y-2 mt-4">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Payer Email</label>
+                  <input
+                    type="email"
+                    value={form.payerEmail}
+                    onChange={(e) => setForm({ ...form, payerEmail: e.target.value })}
+                    placeholder="name@example.com"
+                    className="h-11 w-full rounded-lg border border-primary/20 bg-white dark:bg-background-dark px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  {!emailRegex.test(form.payerEmail) && (
+                    <p className="text-xs text-amber-600">Enter a valid email for Paystack</p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center justify-end gap-3">
@@ -621,6 +777,58 @@ function NewDeliveryForm({ onCancel, onCreated }: { onCancel: () => void; onCrea
   );
 }
 
+function QRView({ text }: { text: string }) {
+  const hostReady = !!window.QRCode;
+  const [ready, setReady] = useState(hostReady);
+  const boxRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    if (ready && boxRef.current) {
+      boxRef.current.innerHTML = '';
+      const content = text.length > 128 ? makeShortQrText({ ref: text, pickup: '', drop: '', item: '', vehicle: '', offer: 0 }) : text;
+      const level: number =
+        (window as unknown as { QRCode?: { CorrectLevel?: { M?: number } } }).QRCode?.CorrectLevel?.M ?? 0;
+      new window.QRCode!(boxRef.current, {
+        text: content,
+        width: 220,
+        height: 220,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: level,
+      });
+    }
+  }, [ready, text]);
+  React.useEffect(() => {
+    if (ready) return;
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.async = true;
+    s.onload = () => setReady(true);
+    document.head.appendChild(s);
+  }, [ready]);
+  const download = () => {
+    const el = boxRef.current;
+    if (!el) return;
+    const canvas = el.querySelector('canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'delivery-qr.png';
+    a.click();
+  };
+  return (
+    <div className="flex flex-col items-center">
+      <div ref={boxRef} className="p-4 rounded-xl border border-primary/20 bg-white dark:bg-background-dark" />
+      <button
+        onClick={download}
+        className="mt-3 h-10 px-4 rounded-lg border border-primary/20 text-sm font-semibold hover:bg-primary/10"
+      >
+        Download PNG
+      </button>
+    </div>
+  );
+}
+
 function AddressAutocomplete({
   value,
   onChange,
@@ -641,6 +849,19 @@ function AddressAutocomplete({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState(value);
   const [active, setActive] = useState<number | null>(null);
+  const fix = (s: string) => {
+    let x = s;
+    x = x.replace(/mauclay/gi, 'Macaulay');
+    x = x.replace(/\bave\b/gi, 'Avenue');
+    x = x.replace(/\brd\b/gi, 'Road');
+    x = x.replace(/\bst\b/gi, 'Street');
+    x = x.replace(/\bdr\b/gi, 'Drive');
+    x = x.replace(/\bcl\b/gi, 'Close');
+    x = x.replace(/\bcr\b/gi, 'Crescent');
+    x = x.replace(/\bln\b/gi, 'Lane');
+    x = x.replace(/\bblvd\b/gi, 'Boulevard');
+    return x;
+  };
   React.useEffect(() => {
     setQ(value);
   }, [value]);
@@ -679,28 +900,85 @@ function AddressAutocomplete({
         return;
       }
       try {
-        const u = new URL('https://nominatim.openstreetmap.org/search');
-        u.searchParams.set('format', 'jsonv2');
-        u.searchParams.set('addressdetails', '1');
-        u.searchParams.set('limit', '8');
-        u.searchParams.set('countrycodes', 'ng');
-        const qParam = qq.toLowerCase().includes('lagos') ? qq : `${qq}, Lagos, Nigeria`;
-        u.searchParams.set('q', qParam);
-        u.searchParams.set('viewbox', '3.1,6.7,3.6,6.3');
-        u.searchParams.set('bounded', '1');
-        const r = await fetch(u.toString(), {
-          signal: controller.signal,
-          headers: { 'Accept-Language': 'en' },
-        });
-        if (!r.ok) throw new Error('search failed');
-        const data = (await r.json()) as Array<{ display_name: string; lat: string; lon: string }>;
-        const next = (data || []).map((d) => ({
-          label: d.display_name,
-          lat: parseFloat(d.lat),
-          lon: parseFloat(d.lon),
-        }));
-        if (next.length > 0) {
-          setItems(next);
+        const hasNum = /\d/.test(qq);
+        const hasStreetWord = /\b(road|rd|street|st|avenue|ave|way|drive|dr|close|cl|crescent|cr|lane|ln|boulevard|blvd|place|court)\b/i.test(qq);
+        const doStructured = hasNum || hasStreetWord;
+
+        const searchGeneral = async () => {
+          const u = new URL('https://nominatim.openstreetmap.org/search');
+          u.searchParams.set('format', 'jsonv2');
+          u.searchParams.set('addressdetails', '1');
+          u.searchParams.set('limit', '8');
+          u.searchParams.set('countrycodes', 'ng');
+          const qParam = qq.toLowerCase().includes('lagos') ? qq : `${qq}, Lagos, Nigeria`;
+          u.searchParams.set('q', qParam);
+          u.searchParams.set('viewbox', '3.1,6.7,3.6,6.3');
+          u.searchParams.set('bounded', '1');
+          const r = await fetch(u.toString(), { signal: controller.signal, headers: { 'Accept-Language': 'en' } });
+          if (!r.ok) throw new Error('search failed');
+          const data = (await r.json()) as Array<{ display_name: string; lat: string; lon: string }>;
+          return (data || []).map((d) => ({ label: d.display_name, lat: parseFloat(d.lat), lon: parseFloat(d.lon) }));
+        };
+
+        const searchStructured = async () => {
+          const u2 = new URL('https://nominatim.openstreetmap.org/search');
+          u2.searchParams.set('format', 'jsonv2');
+          u2.searchParams.set('addressdetails', '1');
+          u2.searchParams.set('limit', '8');
+          u2.searchParams.set('countrycodes', 'ng');
+          u2.searchParams.set('street', fix(qq));
+          u2.searchParams.set('city', 'Lagos');
+          u2.searchParams.set('state', 'Lagos');
+          u2.searchParams.set('country', 'Nigeria');
+          const r2 = await fetch(u2.toString(), { signal: controller.signal, headers: { 'Accept-Language': 'en' } });
+          if (!r2.ok) throw new Error('search failed');
+          const data2 = (await r2.json()) as Array<{ display_name: string; lat: string; lon: string }>;
+          return (data2 || []).map((d) => ({ label: d.display_name, lat: parseFloat(d.lat), lon: parseFloat(d.lon) }));
+        };
+        const searchPhoton = async () => {
+          const u3 = new URL('https://photon.komoot.io/api/');
+          u3.searchParams.set('q', `${fix(qq)}, Lagos, Nigeria`);
+          u3.searchParams.set('limit', '8');
+          u3.searchParams.set('lang', 'en');
+          u3.searchParams.set('lat', '6.5');
+          u3.searchParams.set('lon', '3.4');
+          const r3 = await fetch(u3.toString(), { signal: controller.signal, headers: { 'Accept-Language': 'en' } });
+          if (!r3.ok) throw new Error('search failed');
+          const data3 = await r3.json();
+          const feats: Array<{
+            properties?: { housenumber?: string; street?: string; name?: string; city?: string; locality?: string };
+            geometry?: { coordinates?: [number, number] };
+          }> = (data3 && data3.features) || [];
+          const next3 = feats
+            .map((f) => {
+              const p = f.properties || {};
+              const parts = [p.housenumber, p.street || p.name, p.city || p.locality, 'Lagos', 'Nigeria'].filter(Boolean);
+              const label = parts.join(', ');
+              const coords = f.geometry?.coordinates;
+              const lon = Array.isArray(coords) ? Number(coords[0]) : NaN;
+              const lat = Array.isArray(coords) ? Number(coords[1]) : NaN;
+              if (Number.isFinite(lat) && Number.isFinite(lon) && label) {
+                return { label, lat, lon };
+              }
+              return null;
+            })
+            .filter((v): v is { label: string; lat: number; lon: number } => !!v);
+          return next3;
+        };
+
+        const primary = doStructured ? await searchStructured() : await searchGeneral();
+        let results = primary;
+        if (results.length === 0) {
+          const general = await searchGeneral();
+          results = general;
+        }
+        if (results.length === 0) {
+          const photon = await searchPhoton();
+          results = photon;
+        }
+
+        if (results.length > 0) {
+          setItems(results);
           setOpen(true);
         } else {
           const qn = qq.toLowerCase();

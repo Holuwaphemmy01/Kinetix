@@ -1,4 +1,5 @@
 import fastify from "fastify";
+import rawBody from "fastify-raw-body";
 import { checkDbConnection } from "./db";
 import { initVault } from "./vault";
 import { registerGpsRoutes } from "./routes/gps";
@@ -10,9 +11,17 @@ import { runMigrations } from "./migrations";
 const app = fastify({ logger: true });
 const { contract: vault } = initVault();
 
+app.register(rawBody, {
+  field: "rawBody",
+  global: false,
+  encoding: "utf8",
+  runFirst: true,
+  routes: ["/api/webhooks/paystack"]
+});
+
 registerGpsRoutes(app, vault);
 registerTripRoutes(app, vault);
-registerWebhookRoutes(app);
+registerWebhookRoutes(app, vault);
 
 async function initDbWithRetry() {
   const maxAttempts = 5;

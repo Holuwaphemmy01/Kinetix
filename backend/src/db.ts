@@ -144,3 +144,26 @@ export async function addTripEvent(tripId: string, eventType: string, payload: u
     VALUES (${tripId}, ${eventType}, ${sql.json(payload)})
   `);
 }
+
+export async function listTripEvents(tripId: string, limit = 50) {
+  const safeLimit = Math.max(1, Math.min(500, Number.isFinite(limit) ? Math.floor(limit) : 50));
+  return dbQuery((sql: any) => sql<{
+    id: number;
+    trip_id: string;
+    event_type: string;
+    payload: unknown;
+    created_at: string;
+  }[]>`
+    SELECT id, trip_id, event_type, payload, created_at
+    FROM trip_events
+    WHERE trip_id = ${tripId}
+    ORDER BY created_at DESC
+    LIMIT ${safeLimit}
+  `) as Promise<Array<{
+    id: number;
+    trip_id: string;
+    event_type: string;
+    payload: unknown;
+    created_at: string;
+  }>>;
+}

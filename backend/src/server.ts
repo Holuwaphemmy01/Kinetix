@@ -13,13 +13,25 @@ registerGpsRoutes(app, vault);
 registerTripRoutes(app, vault);
 registerWebhookRoutes(app);
 
-app.listen({ port: PORT, host: "0.0.0.0" }).then(async () => {
-  try {
-    await ensureTables();
-  } catch (e) {
-    app.log.error(e);
+async function initDbWithRetry() {
+  const maxAttempts = 5;
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    try {
+      await ensureTables();
+      const ok = await checkDbConnection();
+      app.log.info({ db_connected: ok, attempt }, "db_check");
+      if (ok) return;
+    } catch (e) {
+      app.log.error({ err: e, attempt }, "db_init_error");
+    }
+    attempt++;
+    await new Promise((res) => setTimeout(res, 2000 * attempt));
   }
-  const ok = await checkDbConnection();
-  app.log.info({ db_connected: ok }, "db_check");
+  app.log.warn("db_not_connected_after_retries");
+}
+
+app.listen({ port: PORT, host: "0.0.0.0" }).then(async () => {
+  initDbWithRetry();
   app.log.info({ port: PORT }, "server_ready");
 });

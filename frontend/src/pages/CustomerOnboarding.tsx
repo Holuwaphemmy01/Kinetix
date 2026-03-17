@@ -83,11 +83,11 @@ const CustomerOnboarding: React.FC<CustomerOnboardingProps> = ({ onClose, onComp
                   </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-primary/20">
-                  <div 
-                    aria-valuemax="100" 
-                    aria-valuemin="0" 
-                    aria-valuenow={(step / 3) * 100} 
-                    className="h-full bg-primary transition-all duration-500 ease-out" 
+                  <div
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={(step / 3) * 100}
+                    className="h-full bg-primary transition-all duration-500 ease-out"
                     role="progressbar"
                     style={{ width: `${(step / 3) * 100}%` }}
                   ></div>
@@ -321,7 +321,7 @@ const CustomerOnboarding: React.FC<CustomerOnboardingProps> = ({ onClose, onComp
                       {otp.map((digit, index) => (
                         <React.Fragment key={index}>
                           <input 
-                            ref={(el) => (otpRefs.current[index] = el)}
+                            ref={(el) => { otpRefs.current[index] = el; }}
                             className="h-12 w-10 sm:h-14 sm:w-14 rounded-lg border border-primary/30 bg-white dark:bg-primary/5 text-center text-xl font-bold focus:border-primary focus:ring-2 focus:ring-primary/20 dark:text-white outline-none transition-all" 
                             maxLength={1} 
                             required 

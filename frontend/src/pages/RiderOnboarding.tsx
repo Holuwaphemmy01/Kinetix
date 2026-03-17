@@ -6,7 +6,7 @@ interface RiderOnboardingProps {
   onComplete?: () => void;
 }
 
-const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose }) => {
+const RiderOnboarding: React.FC<RiderOnboardingProps> = ({ onClose, onComplete }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '',

@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { toIdHex } from "../vault";
 import { getState, setFrozen } from "../services/progress";
-import { addTripEvent, getTripSnapshot, listTripEvents, upsertTripCorridor } from "../db";
+import { addTripEvent, getTripSnapshot, listTripEvents, listTripProgress, upsertTripCorridor } from "../db";
 
 export function registerTripRoutes(app: FastifyInstance, vault: any) {
   const settleSchema = z.object({ deliveryProof: z.string().min(1) });
@@ -89,6 +89,31 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
       ok: true,
       trip: snap.trip,
       lastEvent: snap.lastEvent
+    });
+  });
+
+  app.get("/api/trips/:id/timeline", async (req, reply) => {
+    const id = String((req.params as any).id);
+    const eventsLimitRaw = Number((req.query as any)?.eventsLimit ?? 20);
+    const progressLimitRaw = Number((req.query as any)?.progressLimit ?? 50);
+    const eventsLimit = Number.isFinite(eventsLimitRaw) ? eventsLimitRaw : 20;
+    const progressLimit = Number.isFinite(progressLimitRaw) ? progressLimitRaw : 50;
+    const snap = await getTripSnapshot(id);
+    if (!snap.trip) {
+      return reply.status(404).send({ ok: false, error: "trip_not_found" });
+    }
+    const [events, progress] = await Promise.all([
+      listTripEvents(id, eventsLimit),
+      listTripProgress(id, progressLimit)
+    ]);
+    return reply.send({
+      ok: true,
+      trip: snap.trip,
+      lastEvent: snap.lastEvent,
+      eventsCount: events.length,
+      progressCount: progress.length,
+      events,
+      progress
     });
   });
 }

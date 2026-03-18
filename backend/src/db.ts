@@ -219,3 +219,36 @@ export async function getTripSnapshot(tripId: string) {
     lastEvent: eventRows[0] ?? null
   };
 }
+
+export async function listTripProgress(tripId: string, limit = 50) {
+  const safeLimit = Math.max(1, Math.min(500, Number.isFinite(limit) ? Math.floor(limit) : 50));
+  return dbQuery((sql: any) => sql<{
+    trip_id: string;
+    lat: number;
+    lng: number;
+    drop_lat: number;
+    drop_lng: number;
+    distance_km: number;
+    meters_advanced: number;
+    monotonic: boolean;
+    ts: number;
+    created_at: string;
+  }[]>`
+    SELECT trip_id, lat, lng, drop_lat, drop_lng, distance_km, meters_advanced, monotonic, ts, created_at
+    FROM trip_progress
+    WHERE trip_id = ${tripId}
+    ORDER BY ts DESC, created_at DESC
+    LIMIT ${safeLimit}
+  `) as Promise<Array<{
+    trip_id: string;
+    lat: number;
+    lng: number;
+    drop_lat: number;
+    drop_lng: number;
+    distance_km: number;
+    meters_advanced: number;
+    monotonic: boolean;
+    ts: number;
+    created_at: string;
+  }>>;
+}

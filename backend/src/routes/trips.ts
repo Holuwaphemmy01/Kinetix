@@ -3,6 +3,7 @@ import { z } from "zod";
 import { toIdHex } from "../vault";
 import { getState, setFrozen } from "../services/progress";
 import { addTripEvent, getTripSnapshot, listTripEvents, listTripProgress, upsertTripCorridor } from "../db";
+import { enqueueReportDeviation, enqueueReportReentry, enqueueSettle } from "../queue";
 
 export function registerTripRoutes(app: FastifyInstance, vault: any) {
   const settleSchema = z.object({ deliveryProof: z.string().min(1) });
@@ -20,8 +21,9 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     if (!vault) return reply.status(500).send({ ok: false, error: "vault_not_configured" });
     const idHex = toIdHex(id);
     try {
-      await vault.settle(idHex);
-      return reply.send({ ok: true });
+      await enqueueSettle({ tripId: id, tripIdHex: idHex });
+      await addTripEvent(id, "settle_requested", { deliveryProof: p.deliveryProof });
+      return reply.send({ ok: true, queued: true });
     } catch {
       return reply.status(500).send({ ok: false });
     }
@@ -36,8 +38,9 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     s.frozen = true;
     setFrozen(id, true);
     try {
-      await vault.reportDeviation(idHex, BigInt(Math.floor(b.vector)));
-      return reply.send({ ok: true });
+      await enqueueReportDeviation({ tripId: id, tripIdHex: idHex, vectorScaled: Math.floor(b.vector) });
+      await addTripEvent(id, "freeze_requested", { vector: b.vector });
+      return reply.send({ ok: true, queued: true });
     } catch {
       return reply.status(500).send({ ok: false });
     }
@@ -49,8 +52,9 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     const idHex = toIdHex(id);
     setFrozen(id, false);
     try {
-      await vault.reportReentry(idHex);
-      return reply.send({ ok: true });
+      await enqueueReportReentry({ tripId: id, tripIdHex: idHex });
+      await addTripEvent(id, "unfreeze_requested", {});
+      return reply.send({ ok: true, queued: true });
     } catch {
       return reply.status(500).send({ ok: false });
     }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { acquireIdempotency, upsertPayment } from "../db";
 import { PAYSTACK_SECRET_KEY } from "../config";
 import { toIdHex } from "../vault";
+import { enqueueDepositEscrow } from "../queue";
 
 const paystackSchema = z.object({
   event: z.string(),
@@ -66,7 +67,13 @@ export function registerWebhookRoutes(app: FastifyInstance, vault: any) {
             ? BigInt(String(payload.data.metadata.amountCngnWei))
             : BigInt(amountKobo) * BigInt("10000000000000000");
         try {
-          await vault.depositEscrow(idHex, customer, rider, amountCngnWei);
+          await enqueueDepositEscrow({
+            tripId,
+            tripIdHex: idHex,
+            customer,
+            rider,
+            amountCngnWei: amountCngnWei.toString()
+          });
         } catch {}
       }
     }

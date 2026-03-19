@@ -17,6 +17,7 @@
     "fastify": "^4.26.2",
     "fastify-raw-body": "^4.3.0",
     "nodemon": "^3.1.14",
+    "pg-boss": "^10.2.0",
     "pg": "^8.11.3",
     "postgres": "^3.4.8",
     "zod": "^3.23.8"

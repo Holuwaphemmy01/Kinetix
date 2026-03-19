@@ -8,6 +8,7 @@ import { registerWebhookRoutes } from "./routes/webhooks";
 import { registerHealthRoutes } from "./routes/health";
 import { PORT } from "./config";
 import { runMigrations } from "./migrations";
+import { setupQueue } from "./queue";
 
 const app = fastify({ logger: true });
 const { contract: vault, provider } = initVault();
@@ -33,7 +34,14 @@ async function initDbWithRetry() {
       await runMigrations();
       const ok = await checkDbConnection();
       app.log.info({ db_connected: ok, attempt }, "db_check");
-      if (ok) return;
+      if (ok) {
+        if (vault) {
+          await setupQueue(vault, app.log);
+        } else {
+          app.log.warn("queue_not_started_vault_missing");
+        }
+        return;
+      }
     } catch (e) {
       app.log.error({ err: e, attempt }, "db_init_error");
     }

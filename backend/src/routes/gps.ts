@@ -5,6 +5,7 @@ import { toIdHex } from "../vault";
 import { addTripEvent, getTripCorridor, recordProgress, setTripFrozen } from "../db";
 import { TICK_AMOUNT_CNGN } from "../config";
 import { minDistanceToCorridorMeters, reverseVectorScore } from "../services/corridor";
+import { enqueueReportDeviation, enqueueReportReentry, enqueueTickStream } from "../queue";
 
 export function registerGpsRoutes(app: FastifyInstance, vault: any) {
   const gpsSchema = z.object({
@@ -46,14 +47,21 @@ export function registerGpsRoutes(app: FastifyInstance, vault: any) {
       if (!s.frozen && shouldFreeze) {
         s.frozen = true;
         try {
-          await vault.reportDeviation(idHex, BigInt(Math.floor(score * 1000)));
+          await enqueueReportDeviation({
+            tripId: body.tripId,
+            tripIdHex: idHex,
+            vectorScaled: Math.floor(score * 1000)
+          });
         } catch {}
         await setTripFrozen(body.tripId, true).catch(() => null);
         await addTripEvent(body.tripId, "freeze", { minMeters, bufferMeters: corridorCfg.bufferMeters, vectorScore: score }).catch(() => null);
       } else if (shouldUnfreeze) {
         s.frozen = false;
         try {
-          await vault.reportReentry(idHex);
+          await enqueueReportReentry({
+            tripId: body.tripId,
+            tripIdHex: idHex
+          });
         } catch {}
         await setTripFrozen(body.tripId, false).catch(() => null);
         await addTripEvent(body.tripId, "unfreeze", { minMeters, bufferMeters: corridorCfg.bufferMeters, vectorScore: score }).catch(() => null);
@@ -82,7 +90,11 @@ export function registerGpsRoutes(app: FastifyInstance, vault: any) {
       if (!s.frozen && s.accum >= 500) {
         s.accum = 0;
         try {
-          await vault.tickStream(idHex, TICK_AMOUNT_CNGN);
+          await enqueueTickStream({
+            tripId: body.tripId,
+            tripIdHex: idHex,
+            amountWei: TICK_AMOUNT_CNGN.toString()
+          });
         } catch {}
       }
     } else {

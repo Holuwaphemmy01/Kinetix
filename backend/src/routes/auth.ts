@@ -3,16 +3,27 @@ import { z } from "zod";
 import argon2 from "argon2";
 import {
   createUser,
+  getEmailVerificationTokenByJti,
+  getPasswordResetTokenByJti,
   findUserByEmail,
   findUserById,
   getRefreshTokenByJti,
+  markEmailVerificationTokenUsed,
+  markPasswordResetTokenUsed,
+  markUserEmailVerified,
   revokeRefreshToken,
+  revokeRefreshTokensByUser,
   saveRefreshToken,
+  saveEmailVerificationToken,
+  savePasswordResetToken,
+  updateUserPasswordHash,
   type UserRole
 } from "../db";
 import { requireAccessToken, requireRole } from "../auth";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../services/tokens";
 import { createRateLimit } from "../services/rateLimit";
+import { createOneTimeToken, extractJti } from "../services/oneTimeToken";
+import { EMAIL_VERIFY_TOKEN_EXPIRES_IN, PASSWORD_RESET_TOKEN_EXPIRES_IN } from "../config";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -33,6 +44,19 @@ const logoutSchema = z.object({
   refreshToken: z.string().min(20)
 });
 
+const tokenSchema = z.object({
+  token: z.string().min(20)
+});
+
+const emailSchema = z.object({
+  email: z.string().email()
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(20),
+  newPassword: z.string().min(8).max(128)
+});
+
 async function registerWithRole(body: z.infer<typeof registerSchema>, role: UserRole) {
   const existing = await findUserByEmail(body.email);
   if (existing) return { error: "email_already_exists" as const };
@@ -48,29 +72,29 @@ async function registerWithRole(body: z.infer<typeof registerSchema>, role: User
     role,
     fullName: body.fullName || null
   });
-  const accessToken = signAccessToken(user.id, user.role);
-  const refresh = signRefreshToken(user.id, user.role);
-  const refreshHash = await argon2.hash(refresh.token, {
+  const verifyToken = createOneTimeToken(EMAIL_VERIFY_TOKEN_EXPIRES_IN);
+  const verifyHash = await argon2.hash(verifyToken.token, {
     type: argon2.argon2id,
     memoryCost: 12288,
     timeCost: 2,
     parallelism: 1
   });
-  await saveRefreshToken({
+  await saveEmailVerificationToken({
     userId: user.id,
-    jti: refresh.jti,
-    tokenHash: refreshHash,
-    expiresAtIso: refresh.expiresAt
+    jti: verifyToken.jti,
+    tokenHash: verifyHash,
+    expiresAtIso: verifyToken.expiresAt
   });
   return {
     user: {
       id: user.id,
       email: user.email,
       role: user.role,
-      fullName: user.full_name
+      fullName: user.full_name,
+      emailVerified: user.email_verified
     },
-    accessToken,
-    refreshToken: refresh.token
+    verificationRequired: true,
+    verificationToken: verifyToken.token
   };
 }
 
@@ -78,6 +102,11 @@ export function registerAuthRoutes(app: FastifyInstance) {
   const authRateLimit = createRateLimit({
     keyPrefix: "auth",
     max: 20,
+    windowMs: 60_000
+  });
+  const recoveryRateLimit = createRateLimit({
+    keyPrefix: "auth_recovery",
+    max: 8,
     windowMs: 60_000
   });
 
@@ -109,6 +138,9 @@ export function registerAuthRoutes(app: FastifyInstance) {
     if (!ok) {
       return reply.status(401).send({ ok: false, error: "invalid_credentials" });
     }
+    if (!user.email_verified) {
+      return reply.status(403).send({ ok: false, error: "email_not_verified" });
+    }
     const accessToken = signAccessToken(user.id, user.role);
     const refresh = signRefreshToken(user.id, user.role);
     const refreshHash = await argon2.hash(refresh.token, {
@@ -129,7 +161,8 @@ export function registerAuthRoutes(app: FastifyInstance) {
         id: user.id,
         email: user.email,
         role: user.role,
-        fullName: user.full_name
+        fullName: user.full_name,
+        emailVerified: user.email_verified
       },
       accessToken,
       refreshToken: refresh.token
@@ -196,6 +229,107 @@ export function registerAuthRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
+  app.post("/auth/request-email-verification", { preHandler: recoveryRateLimit }, async (req, reply) => {
+    const body = emailSchema.parse(req.body);
+    const user = await findUserByEmail(body.email);
+    if (!user || user.email_verified) {
+      return reply.send({ ok: true });
+    }
+    const verifyToken = createOneTimeToken(EMAIL_VERIFY_TOKEN_EXPIRES_IN);
+    const verifyHash = await argon2.hash(verifyToken.token, {
+      type: argon2.argon2id,
+      memoryCost: 12288,
+      timeCost: 2,
+      parallelism: 1
+    });
+    await saveEmailVerificationToken({
+      userId: user.id,
+      jti: verifyToken.jti,
+      tokenHash: verifyHash,
+      expiresAtIso: verifyToken.expiresAt
+    });
+    return reply.send({
+      ok: true,
+      verificationToken: verifyToken.token
+    });
+  });
+
+  app.post("/auth/verify-email", { preHandler: recoveryRateLimit }, async (req, reply) => {
+    const body = tokenSchema.parse(req.body);
+    const jti = extractJti(body.token);
+    if (!jti) {
+      return reply.status(400).send({ ok: false, error: "invalid_token_format" });
+    }
+    const tokenRow = await getEmailVerificationTokenByJti(jti);
+    if (!tokenRow || tokenRow.used_at) {
+      return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
+    }
+    if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
+      return reply.status(400).send({ ok: false, error: "token_expired" });
+    }
+    const match = await argon2.verify(tokenRow.token_hash, body.token);
+    if (!match) {
+      return reply.status(400).send({ ok: false, error: "invalid_token" });
+    }
+    await markEmailVerificationTokenUsed(jti);
+    await markUserEmailVerified(tokenRow.user_id);
+    return reply.send({ ok: true });
+  });
+
+  app.post("/auth/forgot-password", { preHandler: recoveryRateLimit }, async (req, reply) => {
+    const body = emailSchema.parse(req.body);
+    const user = await findUserByEmail(body.email);
+    if (!user || !user.is_active) {
+      return reply.send({ ok: true });
+    }
+    const resetToken = createOneTimeToken(PASSWORD_RESET_TOKEN_EXPIRES_IN);
+    const resetHash = await argon2.hash(resetToken.token, {
+      type: argon2.argon2id,
+      memoryCost: 12288,
+      timeCost: 2,
+      parallelism: 1
+    });
+    await savePasswordResetToken({
+      userId: user.id,
+      jti: resetToken.jti,
+      tokenHash: resetHash,
+      expiresAtIso: resetToken.expiresAt
+    });
+    return reply.send({
+      ok: true,
+      resetToken: resetToken.token
+    });
+  });
+
+  app.post("/auth/reset-password", { preHandler: recoveryRateLimit }, async (req, reply) => {
+    const body = resetPasswordSchema.parse(req.body);
+    const jti = extractJti(body.token);
+    if (!jti) {
+      return reply.status(400).send({ ok: false, error: "invalid_token_format" });
+    }
+    const tokenRow = await getPasswordResetTokenByJti(jti);
+    if (!tokenRow || tokenRow.used_at) {
+      return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
+    }
+    if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
+      return reply.status(400).send({ ok: false, error: "token_expired" });
+    }
+    const match = await argon2.verify(tokenRow.token_hash, body.token);
+    if (!match) {
+      return reply.status(400).send({ ok: false, error: "invalid_token" });
+    }
+    const passwordHash = await argon2.hash(body.newPassword, {
+      type: argon2.argon2id,
+      memoryCost: 19456,
+      timeCost: 2,
+      parallelism: 1
+    });
+    await updateUserPasswordHash(tokenRow.user_id, passwordHash);
+    await markPasswordResetTokenUsed(jti);
+    await revokeRefreshTokensByUser(tokenRow.user_id);
+    return reply.send({ ok: true });
+  });
+
   app.get("/auth/me", { preHandler: requireAccessToken }, async (req, reply) => {
     const userId = req.authUser?.userId;
     if (!userId) {
@@ -212,7 +346,9 @@ export function registerAuthRoutes(app: FastifyInstance) {
         email: user.email,
         role: user.role,
         fullName: user.full_name,
-        isActive: user.is_active
+        isActive: user.is_active,
+        emailVerified: user.email_verified,
+        verifiedAt: user.verified_at
       }
     });
   });

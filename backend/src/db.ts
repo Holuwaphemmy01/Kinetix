@@ -262,6 +262,8 @@ export type AuthUserRow = {
   role: UserRole;
   full_name: string | null;
   is_active: boolean;
+  email_verified: boolean;
+  verified_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -275,14 +277,14 @@ export async function createUser(input: {
   const rows = await dbQuery((sql: any) => sql<AuthUserRow[]>`
     INSERT INTO users (email, password_hash, role, full_name)
     VALUES (${input.email.toLowerCase()}, ${input.passwordHash}, ${input.role}, ${input.fullName || null})
-    RETURNING id, email, password_hash, role, full_name, is_active, created_at, updated_at
+    RETURNING id, email, password_hash, role, full_name, is_active, email_verified, verified_at, created_at, updated_at
   `) as AuthUserRow[];
   return rows[0];
 }
 
 export async function findUserByEmail(email: string) {
   const rows = await dbQuery((sql: any) => sql<AuthUserRow[]>`
-    SELECT id, email, password_hash, role, full_name, is_active, created_at, updated_at
+    SELECT id, email, password_hash, role, full_name, is_active, email_verified, verified_at, created_at, updated_at
     FROM users
     WHERE email = ${email.toLowerCase()}
     LIMIT 1
@@ -292,7 +294,7 @@ export async function findUserByEmail(email: string) {
 
 export async function findUserById(id: number) {
   const rows = await dbQuery((sql: any) => sql<AuthUserRow[]>`
-    SELECT id, email, password_hash, role, full_name, is_active, created_at, updated_at
+    SELECT id, email, password_hash, role, full_name, is_active, email_verified, verified_at, created_at, updated_at
     FROM users
     WHERE id = ${id}
     LIMIT 1
@@ -342,5 +344,119 @@ export async function revokeRefreshToken(jti: string) {
     SET revoked_at = NOW()
     WHERE jti = ${jti}
       AND revoked_at IS NULL
+  `);
+}
+
+export async function revokeRefreshTokensByUser(userId: number) {
+  await dbQuery((sql: any) => sql`
+    UPDATE refresh_tokens
+    SET revoked_at = NOW()
+    WHERE user_id = ${userId}
+      AND revoked_at IS NULL
+  `);
+}
+
+export async function markUserEmailVerified(userId: number) {
+  await dbQuery((sql: any) => sql`
+    UPDATE users
+    SET email_verified = TRUE,
+        verified_at = NOW(),
+        updated_at = NOW()
+    WHERE id = ${userId}
+  `);
+}
+
+export async function updateUserPasswordHash(userId: number, passwordHash: string) {
+  await dbQuery((sql: any) => sql`
+    UPDATE users
+    SET password_hash = ${passwordHash},
+        updated_at = NOW()
+    WHERE id = ${userId}
+  `);
+}
+
+export async function saveEmailVerificationToken(input: {
+  userId: number;
+  jti: string;
+  tokenHash: string;
+  expiresAtIso: string;
+}) {
+  await dbQuery((sql: any) => sql`
+    INSERT INTO email_verification_tokens (user_id, jti, token_hash, expires_at)
+    VALUES (${input.userId}, ${input.jti}, ${input.tokenHash}, ${input.expiresAtIso}::timestamptz)
+  `);
+}
+
+export async function getEmailVerificationTokenByJti(jti: string) {
+  const rows = await dbQuery((sql: any) => sql<{
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    used_at: string | null;
+  }[]>`
+    SELECT user_id, jti, token_hash, expires_at, used_at
+    FROM email_verification_tokens
+    WHERE jti = ${jti}
+    LIMIT 1
+  `) as Array<{
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    used_at: string | null;
+  }>;
+  return rows[0] || null;
+}
+
+export async function markEmailVerificationTokenUsed(jti: string) {
+  await dbQuery((sql: any) => sql`
+    UPDATE email_verification_tokens
+    SET used_at = NOW()
+    WHERE jti = ${jti}
+      AND used_at IS NULL
+  `);
+}
+
+export async function savePasswordResetToken(input: {
+  userId: number;
+  jti: string;
+  tokenHash: string;
+  expiresAtIso: string;
+}) {
+  await dbQuery((sql: any) => sql`
+    INSERT INTO password_reset_tokens (user_id, jti, token_hash, expires_at)
+    VALUES (${input.userId}, ${input.jti}, ${input.tokenHash}, ${input.expiresAtIso}::timestamptz)
+  `);
+}
+
+export async function getPasswordResetTokenByJti(jti: string) {
+  const rows = await dbQuery((sql: any) => sql<{
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    used_at: string | null;
+  }[]>`
+    SELECT user_id, jti, token_hash, expires_at, used_at
+    FROM password_reset_tokens
+    WHERE jti = ${jti}
+    LIMIT 1
+  `) as Array<{
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    used_at: string | null;
+  }>;
+  return rows[0] || null;
+}
+
+export async function markPasswordResetTokenUsed(jti: string) {
+  await dbQuery((sql: any) => sql`
+    UPDATE password_reset_tokens
+    SET used_at = NOW()
+    WHERE jti = ${jti}
+      AND used_at IS NULL
   `);
 }

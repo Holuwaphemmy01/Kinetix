@@ -13,4 +13,6 @@ export const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "";
 export const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "";
 export const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "15m";
 export const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
+export const EMAIL_VERIFY_TOKEN_EXPIRES_IN = process.env.EMAIL_VERIFY_TOKEN_EXPIRES_IN || "30m";
+export const PASSWORD_RESET_TOKEN_EXPIRES_IN = process.env.PASSWORD_RESET_TOKEN_EXPIRES_IN || "30m";
 export const TICK_AMOUNT_CNGN = process.env.TICK_AMOUNT_CNGN ? BigInt(process.env.TICK_AMOUNT_CNGN) : BigInt("100000000000000000");

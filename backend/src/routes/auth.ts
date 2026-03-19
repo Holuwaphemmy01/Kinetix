@@ -3,7 +3,7 @@ import { z } from "zod";
 import argon2 from "argon2";
 import {
   createUser,
-  getEmailVerificationTokenByJti,
+  getLatestActiveEmailVerificationTokenByUser,
   getPasswordResetTokenByJti,
   findUserByEmail,
   findUserById,
@@ -22,7 +22,7 @@ import {
 import { requireAccessToken, requireRole } from "../auth";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../services/tokens";
 import { createRateLimit } from "../services/rateLimit";
-import { createOneTimeToken, extractJti } from "../services/oneTimeToken";
+import { createNumericCode, createOneTimeToken, extractJti } from "../services/oneTimeToken";
 import { EMAIL_VERIFY_TOKEN_EXPIRES_IN, PASSWORD_RESET_TOKEN_EXPIRES_IN } from "../config";
 import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email";
 
@@ -53,6 +53,11 @@ const emailSchema = z.object({
   email: z.string().email()
 });
 
+const verifyCodeSchema = z.object({
+  email: z.string().email(),
+  code: z.string().regex(/^\d{4,8}$/)
+});
+
 const resetPasswordSchema = z.object({
   token: z.string().min(20),
   newPassword: z.string().min(8).max(128)
@@ -73,8 +78,9 @@ async function registerWithRole(body: z.infer<typeof registerSchema>, role: User
     role,
     fullName: body.fullName || null
   });
+  const verifyCode = createNumericCode(6);
   const verifyToken = createOneTimeToken(EMAIL_VERIFY_TOKEN_EXPIRES_IN);
-  const verifyHash = await argon2.hash(verifyToken.token, {
+  const verifyHash = await argon2.hash(verifyCode, {
     type: argon2.argon2id,
     memoryCost: 12288,
     timeCost: 2,
@@ -86,7 +92,7 @@ async function registerWithRole(body: z.infer<typeof registerSchema>, role: User
     tokenHash: verifyHash,
     expiresAtIso: verifyToken.expiresAt
   });
-  await sendVerificationEmail({ to: user.email, token: verifyToken.token });
+  await sendVerificationEmail({ to: user.email, token: verifyCode });
   return {
     user: {
       id: user.id,
@@ -236,8 +242,9 @@ export function registerAuthRoutes(app: FastifyInstance) {
     if (!user || user.email_verified) {
       return reply.send({ ok: true });
     }
+    const verifyCode = createNumericCode(6);
     const verifyToken = createOneTimeToken(EMAIL_VERIFY_TOKEN_EXPIRES_IN);
-    const verifyHash = await argon2.hash(verifyToken.token, {
+    const verifyHash = await argon2.hash(verifyCode, {
       type: argon2.argon2id,
       memoryCost: 12288,
       timeCost: 2,
@@ -249,28 +256,28 @@ export function registerAuthRoutes(app: FastifyInstance) {
       tokenHash: verifyHash,
       expiresAtIso: verifyToken.expiresAt
     });
-    await sendVerificationEmail({ to: user.email, token: verifyToken.token });
+    await sendVerificationEmail({ to: user.email, token: verifyCode });
     return reply.send({ ok: true });
   });
 
   app.post("/auth/verify-email", { preHandler: recoveryRateLimit }, async (req, reply) => {
-    const body = tokenSchema.parse(req.body);
-    const jti = extractJti(body.token);
-    if (!jti) {
-      return reply.status(400).send({ ok: false, error: "invalid_token_format" });
+    const body = verifyCodeSchema.parse(req.body);
+    const user = await findUserByEmail(body.email);
+    if (!user) {
+      return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
     }
-    const tokenRow = await getEmailVerificationTokenByJti(jti);
+    const tokenRow = await getLatestActiveEmailVerificationTokenByUser(user.id);
     if (!tokenRow || tokenRow.used_at) {
       return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
     }
     if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
       return reply.status(400).send({ ok: false, error: "token_expired" });
     }
-    const match = await argon2.verify(tokenRow.token_hash, body.token);
+    const match = await argon2.verify(tokenRow.token_hash, body.code);
     if (!match) {
-      return reply.status(400).send({ ok: false, error: "invalid_token" });
+      return reply.status(400).send({ ok: false, error: "invalid_code" });
     }
-    await markEmailVerificationTokenUsed(jti);
+    await markEmailVerificationTokenUsed(tokenRow.jti);
     await markUserEmailVerified(tokenRow.user_id);
     return reply.send({ ok: true });
   });

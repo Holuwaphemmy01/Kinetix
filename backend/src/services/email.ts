@@ -17,7 +17,6 @@ type MailInput = {
 function mustEmailConfig() {
   if (!EMAIL_PROVIDER) throw new Error("EMAIL_PROVIDER_NOT_CONFIGURED");
   if (!EMAIL_FROM) throw new Error("EMAIL_FROM_NOT_CONFIGURED");
-  if (!APP_BASE_URL) throw new Error("APP_BASE_URL_NOT_CONFIGURED");
 }
 
 async function sendWithResend(input: MailInput) {
@@ -89,10 +88,10 @@ async function sendMail(input: MailInput) {
 }
 
 export async function sendVerificationEmail(input: { to: string; token: string }) {
-  const verifyUrl = `${APP_BASE_URL.replace(/\/$/, "")}/verify-email?token=${encodeURIComponent(input.token)}`;
+  const verifyCode = input.token;
   const subject = "Verify your Kinetix account";
-  const text = `Welcome to Kinetix. Verify your email using this link: ${verifyUrl}`;
-  const html = `<p>Welcome to Kinetix.</p><p>Verify your email: <a href="${verifyUrl}">${verifyUrl}</a></p>`;
+  const text = `Welcome to Kinetix. Your verification code is: ${verifyCode}`;
+  const html = `<p>Welcome to Kinetix.</p><p>Your verification code is <strong>${verifyCode}</strong>.</p>`;
   await sendMail({
     to: input.to,
     subject,
@@ -102,6 +101,7 @@ export async function sendVerificationEmail(input: { to: string; token: string }
 }
 
 export async function sendPasswordResetEmail(input: { to: string; token: string }) {
+  if (!APP_BASE_URL) throw new Error("APP_BASE_URL_NOT_CONFIGURED");
   const resetUrl = `${APP_BASE_URL.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(input.token)}`;
   const subject = "Reset your Kinetix password";
   const text = `Reset your password using this link: ${resetUrl}`;

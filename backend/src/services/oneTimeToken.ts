@@ -24,3 +24,13 @@ export function extractJti(token: string) {
   if (idx <= 0) return null;
   return token.slice(0, idx);
 }
+
+export function createNumericCode(length = 6) {
+  const digits = "0123456789";
+  let out = "";
+  const bytes = randomBytes(length);
+  for (let i = 0; i < length; i++) {
+    out += digits[bytes[i] % 10];
+  }
+  return out;
+}

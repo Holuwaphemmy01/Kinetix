@@ -6,6 +6,7 @@ import { addTripEvent, getTripCorridor, recordProgress, setTripFrozen } from "..
 import { TICK_AMOUNT_CNGN } from "../config";
 import { minDistanceToCorridorMeters, reverseVectorScore } from "../services/corridor";
 import { enqueueReportDeviation, enqueueReportReentry, enqueueTickStream } from "../queue";
+import { requireServiceOrAdmin } from "../auth";
 
 export function registerGpsRoutes(app: FastifyInstance, vault: any) {
   const gpsSchema = z.object({
@@ -17,7 +18,7 @@ export function registerGpsRoutes(app: FastifyInstance, vault: any) {
     timestamp: z.number(),
     rider: z.string().min(1)
   });
-  app.post("/api/gps/ingest", async (req, reply) => {
+  app.post("/api/gps/ingest", { preHandler: requireServiceOrAdmin }, async (req, reply) => {
     const body = gpsSchema.parse(req.body);
     if (!vault) {
       return reply.status(500).send({ ok: false, error: "vault_not_configured" });

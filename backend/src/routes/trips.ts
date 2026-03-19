@@ -4,6 +4,7 @@ import { toIdHex } from "../vault";
 import { getState, setFrozen } from "../services/progress";
 import { addTripEvent, getTripSnapshot, listTripEvents, listTripProgress, upsertTripCorridor } from "../db";
 import { enqueueReportDeviation, enqueueReportReentry, enqueueSettle } from "../queue";
+import { requireAdmin, requireServiceOrAdmin } from "../auth";
 
 export function registerTripRoutes(app: FastifyInstance, vault: any) {
   const settleSchema = z.object({ deliveryProof: z.string().min(1) });
@@ -15,7 +16,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     bufferMeters: z.number().int().positive().max(1000).default(80)
   });
 
-  app.post("/api/trips/:id/settle", async (req, reply) => {
+  app.post("/api/trips/:id/settle", { preHandler: requireAdmin }, async (req, reply) => {
     const p = settleSchema.parse(req.body);
     const id = String((req.params as any).id);
     if (!vault) return reply.status(500).send({ ok: false, error: "vault_not_configured" });
@@ -29,7 +30,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     }
   });
 
-  app.post("/api/trips/:id/freeze", async (req, reply) => {
+  app.post("/api/trips/:id/freeze", { preHandler: requireAdmin }, async (req, reply) => {
     const b = vectorSchema.parse(req.body);
     const id = String((req.params as any).id);
     if (!vault) return reply.status(500).send({ ok: false, error: "vault_not_configured" });
@@ -46,7 +47,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     }
   });
 
-  app.post("/api/trips/:id/unfreeze", async (req, reply) => {
+  app.post("/api/trips/:id/unfreeze", { preHandler: requireAdmin }, async (req, reply) => {
     const id = String((req.params as any).id);
     if (!vault) return reply.status(500).send({ ok: false, error: "vault_not_configured" });
     const idHex = toIdHex(id);
@@ -60,7 +61,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     }
   });
 
-  app.post("/api/trips/:id/corridor", async (req, reply) => {
+  app.post("/api/trips/:id/corridor", { preHandler: requireAdmin }, async (req, reply) => {
     const id = String((req.params as any).id);
     const body = corridorSchema.parse(req.body);
     await upsertTripCorridor({
@@ -75,7 +76,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     return reply.send({ ok: true });
   });
 
-  app.get("/api/trips/:id/events", async (req, reply) => {
+  app.get("/api/trips/:id/events", { preHandler: requireServiceOrAdmin }, async (req, reply) => {
     const id = String((req.params as any).id);
     const limitRaw = Number((req.query as any)?.limit ?? 50);
     const limit = Number.isFinite(limitRaw) ? limitRaw : 50;
@@ -83,7 +84,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     return reply.send({ ok: true, tripId: id, count: items.length, items });
   });
 
-  app.get("/api/trips/:id", async (req, reply) => {
+  app.get("/api/trips/:id", { preHandler: requireServiceOrAdmin }, async (req, reply) => {
     const id = String((req.params as any).id);
     const snap = await getTripSnapshot(id);
     if (!snap.trip) {
@@ -96,7 +97,7 @@ export function registerTripRoutes(app: FastifyInstance, vault: any) {
     });
   });
 
-  app.get("/api/trips/:id/timeline", async (req, reply) => {
+  app.get("/api/trips/:id/timeline", { preHandler: requireServiceOrAdmin }, async (req, reply) => {
     const id = String((req.params as any).id);
     const eventsLimitRaw = Number((req.query as any)?.eventsLimit ?? 20);
     const progressLimitRaw = Number((req.query as any)?.progressLimit ?? 50);

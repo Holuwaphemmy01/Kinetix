@@ -1,14 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { checkDbConnection } from "../db";
 import { getQueueHealth } from "../queue";
+import { requireServiceOrAdmin } from "../auth";
 
 export function registerHealthRoutes(app: FastifyInstance, deps: { provider: any; vault: any }) {
-  app.get("/health/db", async (_req, reply) => {
+  app.get("/health/db", { preHandler: requireServiceOrAdmin }, async (_req, reply) => {
     const connected = await checkDbConnection();
     return reply.send({ ok: connected, db_connected: connected });
   });
 
-  app.get("/health/chain", async (_req, reply) => {
+  app.get("/health/chain", { preHandler: requireServiceOrAdmin }, async (_req, reply) => {
     if (!deps.provider) {
       return reply.status(503).send({ ok: false, error: "provider_not_configured" });
     }
@@ -27,7 +28,7 @@ export function registerHealthRoutes(app: FastifyInstance, deps: { provider: any
     }
   });
 
-  app.get("/health/queue", async (_req, reply) => {
+  app.get("/health/queue", { preHandler: requireServiceOrAdmin }, async (_req, reply) => {
     const q = getQueueHealth();
     const ok = q.started && q.workersAttached;
     return reply.send({

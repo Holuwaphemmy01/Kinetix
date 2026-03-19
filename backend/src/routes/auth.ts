@@ -10,6 +10,8 @@ import {
   getRefreshTokenByJti,
   increaseEmailVerificationFailedAttempts,
   increasePasswordResetFailedAttempts,
+  invalidateAllActiveEmailVerificationTokensByUser,
+  invalidateAllActivePasswordResetTokensByUser,
   markEmailVerificationTokenUsed,
   markPasswordResetTokenUsed,
   markUserEmailVerified,
@@ -254,6 +256,7 @@ export function registerAuthRoutes(app: FastifyInstance) {
       timeCost: 2,
       parallelism: 1
     });
+    await invalidateAllActiveEmailVerificationTokensByUser(user.id);
     await saveEmailVerificationToken({
       userId: user.id,
       jti: verifyToken.jti,
@@ -309,6 +312,7 @@ export function registerAuthRoutes(app: FastifyInstance) {
       timeCost: 2,
       parallelism: 1
     });
+    await invalidateAllActivePasswordResetTokensByUser(user.id);
     await savePasswordResetToken({
       userId: user.id,
       jti: resetToken.jti,

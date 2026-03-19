@@ -446,6 +446,15 @@ export async function markEmailVerificationTokenUsed(jti: string) {
   `);
 }
 
+export async function invalidateAllActiveEmailVerificationTokensByUser(userId: number) {
+  await dbQuery((sql: any) => sql`
+    UPDATE email_verification_tokens
+    SET used_at = NOW()
+    WHERE user_id = ${userId}
+      AND used_at IS NULL
+  `);
+}
+
 export async function savePasswordResetToken(input: {
   userId: number;
   jti: string;
@@ -513,6 +522,15 @@ export async function markPasswordResetTokenUsed(jti: string) {
     UPDATE password_reset_tokens
     SET used_at = NOW()
     WHERE jti = ${jti}
+      AND used_at IS NULL
+  `);
+}
+
+export async function invalidateAllActivePasswordResetTokensByUser(userId: number) {
+  await dbQuery((sql: any) => sql`
+    UPDATE password_reset_tokens
+    SET used_at = NOW()
+    WHERE user_id = ${userId}
       AND used_at IS NULL
   `);
 }

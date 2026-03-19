@@ -4,7 +4,7 @@ import argon2 from "argon2";
 import {
   createUser,
   getLatestActiveEmailVerificationTokenByUser,
-  getPasswordResetTokenByJti,
+  getLatestActivePasswordResetTokenByUser,
   findUserByEmail,
   findUserById,
   getRefreshTokenByJti,
@@ -59,7 +59,8 @@ const verifyCodeSchema = z.object({
 });
 
 const resetPasswordSchema = z.object({
-  token: z.string().min(20),
+  email: z.string().email(),
+  code: z.string().regex(/^\d{4,8}$/),
   newPassword: z.string().min(8).max(128)
 });
 
@@ -288,8 +289,9 @@ export function registerAuthRoutes(app: FastifyInstance) {
     if (!user || !user.is_active) {
       return reply.send({ ok: true });
     }
+    const resetCode = createNumericCode(6);
     const resetToken = createOneTimeToken(PASSWORD_RESET_TOKEN_EXPIRES_IN);
-    const resetHash = await argon2.hash(resetToken.token, {
+    const resetHash = await argon2.hash(resetCode, {
       type: argon2.argon2id,
       memoryCost: 12288,
       timeCost: 2,
@@ -301,26 +303,26 @@ export function registerAuthRoutes(app: FastifyInstance) {
       tokenHash: resetHash,
       expiresAtIso: resetToken.expiresAt
     });
-    await sendPasswordResetEmail({ to: user.email, token: resetToken.token });
+    await sendPasswordResetEmail({ to: user.email, code: resetCode });
     return reply.send({ ok: true });
   });
 
   app.post("/auth/reset-password", { preHandler: recoveryRateLimit }, async (req, reply) => {
     const body = resetPasswordSchema.parse(req.body);
-    const jti = extractJti(body.token);
-    if (!jti) {
-      return reply.status(400).send({ ok: false, error: "invalid_token_format" });
+    const user = await findUserByEmail(body.email);
+    if (!user) {
+      return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
     }
-    const tokenRow = await getPasswordResetTokenByJti(jti);
+    const tokenRow = await getLatestActivePasswordResetTokenByUser(user.id);
     if (!tokenRow || tokenRow.used_at) {
       return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
     }
     if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
       return reply.status(400).send({ ok: false, error: "token_expired" });
     }
-    const match = await argon2.verify(tokenRow.token_hash, body.token);
+    const match = await argon2.verify(tokenRow.token_hash, body.code);
     if (!match) {
-      return reply.status(400).send({ ok: false, error: "invalid_token" });
+      return reply.status(400).send({ ok: false, error: "invalid_code" });
     }
     const passwordHash = await argon2.hash(body.newPassword, {
       type: argon2.argon2id,
@@ -329,7 +331,7 @@ export function registerAuthRoutes(app: FastifyInstance) {
       parallelism: 1
     });
     await updateUserPasswordHash(tokenRow.user_id, passwordHash);
-    await markPasswordResetTokenUsed(jti);
+    await markPasswordResetTokenUsed(tokenRow.jti);
     await revokeRefreshTokensByUser(tokenRow.user_id);
     return reply.send({ ok: true });
   });

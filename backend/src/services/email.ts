@@ -1,5 +1,4 @@
 import {
-  APP_BASE_URL,
   EMAIL_FROM,
   EMAIL_PROVIDER,
   POSTMARK_SERVER_TOKEN,
@@ -100,12 +99,10 @@ export async function sendVerificationEmail(input: { to: string; token: string }
   });
 }
 
-export async function sendPasswordResetEmail(input: { to: string; token: string }) {
-  if (!APP_BASE_URL) throw new Error("APP_BASE_URL_NOT_CONFIGURED");
-  const resetUrl = `${APP_BASE_URL.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(input.token)}`;
+export async function sendPasswordResetEmail(input: { to: string; code: string }) {
   const subject = "Reset your Kinetix password";
-  const text = `Reset your password using this link: ${resetUrl}`;
-  const html = `<p>Reset your password.</p><p><a href="${resetUrl}">${resetUrl}</a></p>`;
+  const text = `Your Kinetix password reset code is: ${input.code}`;
+  const html = `<p>Your Kinetix password reset code is <strong>${input.code}</strong>.</p>`;
   await sendMail({
     to: input.to,
     subject,

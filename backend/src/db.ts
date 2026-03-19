@@ -476,6 +476,30 @@ export async function getPasswordResetTokenByJti(jti: string) {
   return rows[0] || null;
 }
 
+export async function getLatestActivePasswordResetTokenByUser(userId: number) {
+  const rows = await dbQuery((sql: any) => sql<{
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    used_at: string | null;
+  }[]>`
+    SELECT user_id, jti, token_hash, expires_at, used_at
+    FROM password_reset_tokens
+    WHERE user_id = ${userId}
+      AND used_at IS NULL
+    ORDER BY created_at DESC
+    LIMIT 1
+  `) as Array<{
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    used_at: string | null;
+  }>;
+  return rows[0] || null;
+}
+
 export async function markPasswordResetTokenUsed(jti: string) {
   await dbQuery((sql: any) => sql`
     UPDATE password_reset_tokens

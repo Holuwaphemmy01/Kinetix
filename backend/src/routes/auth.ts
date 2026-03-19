@@ -24,6 +24,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../servic
 import { createRateLimit } from "../services/rateLimit";
 import { createOneTimeToken, extractJti } from "../services/oneTimeToken";
 import { EMAIL_VERIFY_TOKEN_EXPIRES_IN, PASSWORD_RESET_TOKEN_EXPIRES_IN } from "../config";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../services/email";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -85,6 +86,7 @@ async function registerWithRole(body: z.infer<typeof registerSchema>, role: User
     tokenHash: verifyHash,
     expiresAtIso: verifyToken.expiresAt
   });
+  await sendVerificationEmail({ to: user.email, token: verifyToken.token });
   return {
     user: {
       id: user.id,
@@ -93,8 +95,7 @@ async function registerWithRole(body: z.infer<typeof registerSchema>, role: User
       fullName: user.full_name,
       emailVerified: user.email_verified
     },
-    verificationRequired: true,
-    verificationToken: verifyToken.token
+    verificationRequired: true
   };
 }
 
@@ -248,10 +249,8 @@ export function registerAuthRoutes(app: FastifyInstance) {
       tokenHash: verifyHash,
       expiresAtIso: verifyToken.expiresAt
     });
-    return reply.send({
-      ok: true,
-      verificationToken: verifyToken.token
-    });
+    await sendVerificationEmail({ to: user.email, token: verifyToken.token });
+    return reply.send({ ok: true });
   });
 
   app.post("/auth/verify-email", { preHandler: recoveryRateLimit }, async (req, reply) => {
@@ -295,10 +294,8 @@ export function registerAuthRoutes(app: FastifyInstance) {
       tokenHash: resetHash,
       expiresAtIso: resetToken.expiresAt
     });
-    return reply.send({
-      ok: true,
-      resetToken: resetToken.token
-    });
+    await sendPasswordResetEmail({ to: user.email, token: resetToken.token });
+    return reply.send({ ok: true });
   });
 
   app.post("/auth/reset-password", { preHandler: recoveryRateLimit }, async (req, reply) => {

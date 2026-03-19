@@ -6,6 +6,7 @@ import { registerGpsRoutes } from "./routes/gps";
 import { registerTripRoutes } from "./routes/trips";
 import { registerWebhookRoutes } from "./routes/webhooks";
 import { registerHealthRoutes } from "./routes/health";
+import { registerAuthRoutes } from "./routes/auth";
 import { PORT } from "./config";
 import { runMigrations } from "./migrations";
 import { setupQueue } from "./queue";
@@ -25,6 +26,7 @@ registerGpsRoutes(app, vault);
 registerTripRoutes(app, vault);
 registerWebhookRoutes(app, vault);
 registerHealthRoutes(app, { provider, vault });
+registerAuthRoutes(app);
 
 async function initDbWithRetry() {
   const maxAttempts = 5;

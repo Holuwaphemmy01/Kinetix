@@ -252,3 +252,95 @@ export async function listTripProgress(tripId: string, limit = 50) {
     created_at: string;
   }>>;
 }
+
+export type UserRole = "customer" | "logistics" | "admin";
+
+export type AuthUserRow = {
+  id: number;
+  email: string;
+  password_hash: string;
+  role: UserRole;
+  full_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function createUser(input: {
+  email: string;
+  passwordHash: string;
+  role: UserRole;
+  fullName?: string | null;
+}) {
+  const rows = await dbQuery((sql: any) => sql<AuthUserRow[]>`
+    INSERT INTO users (email, password_hash, role, full_name)
+    VALUES (${input.email.toLowerCase()}, ${input.passwordHash}, ${input.role}, ${input.fullName || null})
+    RETURNING id, email, password_hash, role, full_name, is_active, created_at, updated_at
+  `) as AuthUserRow[];
+  return rows[0];
+}
+
+export async function findUserByEmail(email: string) {
+  const rows = await dbQuery((sql: any) => sql<AuthUserRow[]>`
+    SELECT id, email, password_hash, role, full_name, is_active, created_at, updated_at
+    FROM users
+    WHERE email = ${email.toLowerCase()}
+    LIMIT 1
+  `) as AuthUserRow[];
+  return rows[0] || null;
+}
+
+export async function findUserById(id: number) {
+  const rows = await dbQuery((sql: any) => sql<AuthUserRow[]>`
+    SELECT id, email, password_hash, role, full_name, is_active, created_at, updated_at
+    FROM users
+    WHERE id = ${id}
+    LIMIT 1
+  `) as AuthUserRow[];
+  return rows[0] || null;
+}
+
+export async function saveRefreshToken(input: {
+  userId: number;
+  jti: string;
+  tokenHash: string;
+  expiresAtIso: string;
+}) {
+  await dbQuery((sql: any) => sql`
+    INSERT INTO refresh_tokens (user_id, jti, token_hash, expires_at)
+    VALUES (${input.userId}, ${input.jti}, ${input.tokenHash}, ${input.expiresAtIso}::timestamptz)
+  `);
+}
+
+export async function getRefreshTokenByJti(jti: string) {
+  const rows = await dbQuery((sql: any) => sql<{
+    id: number;
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    revoked_at: string | null;
+  }[]>`
+    SELECT id, user_id, jti, token_hash, expires_at, revoked_at
+    FROM refresh_tokens
+    WHERE jti = ${jti}
+    LIMIT 1
+  `) as Array<{
+    id: number;
+    user_id: number;
+    jti: string;
+    token_hash: string;
+    expires_at: string;
+    revoked_at: string | null;
+  }>;
+  return rows[0] || null;
+}
+
+export async function revokeRefreshToken(jti: string) {
+  await dbQuery((sql: any) => sql`
+    UPDATE refresh_tokens
+    SET revoked_at = NOW()
+    WHERE jti = ${jti}
+      AND revoked_at IS NULL
+  `);
+}

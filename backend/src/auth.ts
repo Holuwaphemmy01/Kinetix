@@ -1,6 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { timingSafeEqual } from "node:crypto";
 import { ADMIN_API_KEY, SERVICE_API_KEY } from "./config";
+import { verifyAccessToken } from "./services/tokens";
+import type { UserRole } from "./db";
 
 function parseBearerToken(req: FastifyRequest) {
   const auth = String(req.headers.authorization || "");
@@ -39,4 +41,34 @@ export async function requireServiceOrAdmin(req: FastifyRequest, reply: FastifyR
   if (!serviceOk && !adminOk) {
     return reply.status(401).send({ ok: false, error: "unauthorized_service" });
   }
+}
+
+export async function requireAccessToken(req: FastifyRequest, reply: FastifyReply) {
+  const token = parseBearerToken(req);
+  if (!token) {
+    return reply.status(401).send({ ok: false, error: "missing_access_token" });
+  }
+  try {
+    const payload = verifyAccessToken(token);
+    if (payload.typ !== "access") {
+      return reply.status(401).send({ ok: false, error: "invalid_access_token_type" });
+    }
+    req.authUser = {
+      userId: Number(payload.sub),
+      role: payload.role
+    };
+  } catch {
+    return reply.status(401).send({ ok: false, error: "invalid_access_token" });
+  }
+}
+
+export function requireRole(roles: UserRole[]) {
+  return async function roleGuard(req: FastifyRequest, reply: FastifyReply) {
+    if (!req.authUser) {
+      return reply.status(401).send({ ok: false, error: "missing_auth_user" });
+    }
+    if (!roles.includes(req.authUser.role)) {
+      return reply.status(403).send({ ok: false, error: "forbidden_role" });
+    }
+  };
 }

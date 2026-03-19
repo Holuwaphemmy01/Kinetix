@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { checkDbConnection } from "../db";
+import { getQueueHealth } from "../queue";
 
 export function registerHealthRoutes(app: FastifyInstance, deps: { provider: any; vault: any }) {
   app.get("/health/db", async (_req, reply) => {
@@ -24,5 +25,14 @@ export function registerHealthRoutes(app: FastifyInstance, deps: { provider: any
     } catch (e) {
       return reply.status(503).send({ ok: false, error: "chain_unreachable" });
     }
+  });
+
+  app.get("/health/queue", async (_req, reply) => {
+    const q = getQueueHealth();
+    const ok = q.started && q.workersAttached;
+    return reply.send({
+      ok,
+      ...q
+    });
   });
 }

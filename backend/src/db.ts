@@ -394,8 +394,9 @@ export async function getEmailVerificationTokenByJti(jti: string) {
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }[]>`
-    SELECT user_id, jti, token_hash, expires_at, used_at
+    SELECT user_id, jti, token_hash, expires_at, used_at, failed_attempts
     FROM email_verification_tokens
     WHERE jti = ${jti}
     LIMIT 1
@@ -405,6 +406,7 @@ export async function getEmailVerificationTokenByJti(jti: string) {
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }>;
   return rows[0] || null;
 }
@@ -416,8 +418,9 @@ export async function getLatestActiveEmailVerificationTokenByUser(userId: number
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }[]>`
-    SELECT user_id, jti, token_hash, expires_at, used_at
+    SELECT user_id, jti, token_hash, expires_at, used_at, failed_attempts
     FROM email_verification_tokens
     WHERE user_id = ${userId}
       AND used_at IS NULL
@@ -429,6 +432,7 @@ export async function getLatestActiveEmailVerificationTokenByUser(userId: number
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }>;
   return rows[0] || null;
 }
@@ -461,8 +465,9 @@ export async function getPasswordResetTokenByJti(jti: string) {
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }[]>`
-    SELECT user_id, jti, token_hash, expires_at, used_at
+    SELECT user_id, jti, token_hash, expires_at, used_at, failed_attempts
     FROM password_reset_tokens
     WHERE jti = ${jti}
     LIMIT 1
@@ -472,6 +477,7 @@ export async function getPasswordResetTokenByJti(jti: string) {
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }>;
   return rows[0] || null;
 }
@@ -483,8 +489,9 @@ export async function getLatestActivePasswordResetTokenByUser(userId: number) {
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }[]>`
-    SELECT user_id, jti, token_hash, expires_at, used_at
+    SELECT user_id, jti, token_hash, expires_at, used_at, failed_attempts
     FROM password_reset_tokens
     WHERE user_id = ${userId}
       AND used_at IS NULL
@@ -496,6 +503,7 @@ export async function getLatestActivePasswordResetTokenByUser(userId: number) {
     token_hash: string;
     expires_at: string;
     used_at: string | null;
+    failed_attempts: number;
   }>;
   return rows[0] || null;
 }
@@ -507,4 +515,26 @@ export async function markPasswordResetTokenUsed(jti: string) {
     WHERE jti = ${jti}
       AND used_at IS NULL
   `);
+}
+
+export async function increaseEmailVerificationFailedAttempts(jti: string) {
+  const rows = await dbQuery((sql: any) => sql<{ failed_attempts: number }[]>`
+    UPDATE email_verification_tokens
+    SET failed_attempts = failed_attempts + 1
+    WHERE jti = ${jti}
+      AND used_at IS NULL
+    RETURNING failed_attempts
+  `) as Array<{ failed_attempts: number }>;
+  return rows[0]?.failed_attempts ?? 0;
+}
+
+export async function increasePasswordResetFailedAttempts(jti: string) {
+  const rows = await dbQuery((sql: any) => sql<{ failed_attempts: number }[]>`
+    UPDATE password_reset_tokens
+    SET failed_attempts = failed_attempts + 1
+    WHERE jti = ${jti}
+      AND used_at IS NULL
+    RETURNING failed_attempts
+  `) as Array<{ failed_attempts: number }>;
+  return rows[0]?.failed_attempts ?? 0;
 }

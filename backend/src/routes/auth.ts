@@ -8,6 +8,8 @@ import {
   findUserByEmail,
   findUserById,
   getRefreshTokenByJti,
+  increaseEmailVerificationFailedAttempts,
+  increasePasswordResetFailedAttempts,
   markEmailVerificationTokenUsed,
   markPasswordResetTokenUsed,
   markUserEmailVerified,
@@ -63,6 +65,7 @@ const resetPasswordSchema = z.object({
   code: z.string().regex(/^\d{4,8}$/),
   newPassword: z.string().min(8).max(128)
 });
+const MAX_CODE_ATTEMPTS = 5;
 
 async function registerWithRole(body: z.infer<typeof registerSchema>, role: UserRole) {
   const existing = await findUserByEmail(body.email);
@@ -271,11 +274,20 @@ export function registerAuthRoutes(app: FastifyInstance) {
     if (!tokenRow || tokenRow.used_at) {
       return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
     }
+    if (tokenRow.failed_attempts >= MAX_CODE_ATTEMPTS) {
+      await markEmailVerificationTokenUsed(tokenRow.jti);
+      return reply.status(429).send({ ok: false, error: "too_many_attempts_request_new_code" });
+    }
     if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
       return reply.status(400).send({ ok: false, error: "token_expired" });
     }
     const match = await argon2.verify(tokenRow.token_hash, body.code);
     if (!match) {
+      const failed = await increaseEmailVerificationFailedAttempts(tokenRow.jti);
+      if (failed >= MAX_CODE_ATTEMPTS) {
+        await markEmailVerificationTokenUsed(tokenRow.jti);
+        return reply.status(429).send({ ok: false, error: "too_many_attempts_request_new_code" });
+      }
       return reply.status(400).send({ ok: false, error: "invalid_code" });
     }
     await markEmailVerificationTokenUsed(tokenRow.jti);
@@ -317,11 +329,20 @@ export function registerAuthRoutes(app: FastifyInstance) {
     if (!tokenRow || tokenRow.used_at) {
       return reply.status(400).send({ ok: false, error: "token_not_found_or_used" });
     }
+    if (tokenRow.failed_attempts >= MAX_CODE_ATTEMPTS) {
+      await markPasswordResetTokenUsed(tokenRow.jti);
+      return reply.status(429).send({ ok: false, error: "too_many_attempts_request_new_code" });
+    }
     if (new Date(tokenRow.expires_at).getTime() <= Date.now()) {
       return reply.status(400).send({ ok: false, error: "token_expired" });
     }
     const match = await argon2.verify(tokenRow.token_hash, body.code);
     if (!match) {
+      const failed = await increasePasswordResetFailedAttempts(tokenRow.jti);
+      if (failed >= MAX_CODE_ATTEMPTS) {
+        await markPasswordResetTokenUsed(tokenRow.jti);
+        return reply.status(429).send({ ok: false, error: "too_many_attempts_request_new_code" });
+      }
       return reply.status(400).send({ ok: false, error: "invalid_code" });
     }
     const passwordHash = await argon2.hash(body.newPassword, {
